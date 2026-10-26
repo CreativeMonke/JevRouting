@@ -10,10 +10,32 @@
 # shells out to the agent CLI directly; `kind: mock` is for tests.
 
 jev:
-  baseUrl: ${JEV_BASE_URL:-https://opencode.ai/zen/v1}
-  apiKey: ${JEV_API_KEY}
-  model: ${JEV_MODEL:-jev-1.13-free}
   timeoutMs: 4000
+  # Ordered failover chain. A backend is skipped when any `requires` value is empty, so
+  # each one switches on just by setting its env vars. Rate-limited backends (429) are
+  # skipped until their Retry-After passes.
+  backends:
+    - name: local-clef              # Cloudflare Clef-flash on this Mac via MLX (scripts/clef-serve.sh)
+      baseUrl: ${JEV_LOCAL_URL}
+      model: clef-flash
+      timeoutMs: 8000
+      requires: ["${JEV_LOCAL_URL}"]
+    - name: opencode-zen            # TypeSafe Jev hosted free by OpenCode Zen
+      baseUrl: https://opencode.ai/zen/v1
+      apiKey: ${JEV_API_KEY}
+      model: jev-1.13-free
+      requires: ["${JEV_API_KEY}"]
+    - name: cloudflare-clef-flash   # Workers AI (10K free neurons/day)
+      transport: workers-ai
+      baseUrl: https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}
+      apiKey: ${CLOUDFLARE_AUTH_TOKEN}
+      model: clef-flash
+      requires: ["${CLOUDFLARE_ACCOUNT_ID}", "${CLOUDFLARE_AUTH_TOKEN}"]
+    - name: typesafe
+      baseUrl: https://api.typesafe.ai/v1
+      apiKey: ${TYPESAFE_API_KEY}
+      model: jev-1.13.0
+      requires: ["${TYPESAFE_API_KEY}"]
 
 classifier:
   difficultyQuantile: 0.8     # lean toward stronger models when Jev is unsure
@@ -28,7 +50,13 @@ routing:
   fallback: [claude-sonnet]
 
 catalog:
-  maxAgeHours: 24
+  maxAgeHours: 24           # local cache, refreshed at most once a day
+  sources:
+    slopalytics: { enabled: true }        # primary: benchmarks, cost/task, real usage prices + reliability
+    modelsDev: { enabled: true }          # fills pricing/cache prices for models Slopalytics lacks
+    artificialAnalysis:                   # fills intelligence scores (needs a free key)
+      enabled: true
+      apiKey: ${AA_API_KEY}
 
 telemetry:
   logFile: ${JEV_LOG_FILE:-logs/decisions.jsonl}

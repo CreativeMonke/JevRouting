@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { appendFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import type { JevRoutingConfig } from '../config/schema.js';
-import { JevClient, JevError } from '../jev/index.js';
+import { JevError, JevPool, type JevClientOptions, type SystemOneClient } from '../jev/index.js';
 import { ProviderError, type ChatMessage, type CompletionResult, type Provider } from '../providers/types.js';
 import { assessHeuristic, assessWithJev, type FitOption } from './assess.js';
 import { OutcomeStore } from './outcomes.js';
@@ -15,7 +15,7 @@ export interface RouterDeps {
   config: JevRoutingConfig;
   providers: Map<string, Provider>;
   catalog?: CatalogLookup;
-  jev?: JevClient;
+  jev?: SystemOneClient;
   sessions?: SessionStore;
   outcomes?: OutcomeStore;
   /** Override decision log sink (default: JSONL file from config). */
@@ -33,25 +33,12 @@ export interface RunResult {
 export class Router {
   readonly sessions: SessionStore;
   readonly outcomes: OutcomeStore;
-  private readonly jev?: JevClient;
+  private readonly jev?: SystemOneClient;
 
   constructor(private readonly deps: RouterDeps) {
     this.sessions = deps.sessions ?? new SessionStore();
     this.outcomes = deps.outcomes ?? new OutcomeStore();
-    const j = deps.config.jev;
-    this.jev =
-      deps.jev ??
-      (j.enabled
-        ? new JevClient({
-            baseUrl: j.baseUrl,
-            apiKey: j.apiKey,
-            model: j.model,
-            timeoutMs: j.timeoutMs,
-            maxRetries: j.maxRetries,
-            circuitBreakerThreshold: j.circuitBreakerThreshold,
-            circuitBreakerCooldownMs: j.circuitBreakerCooldownMs,
-          })
-        : undefined);
+    this.jev = deps.jev ?? jevFromConfig(deps.config);
   }
 
   private fitOptions(): FitOption[] {
@@ -190,6 +177,25 @@ export class Router {
       // Logging must never break routing.
     }
   }
+}
+
+/** Build the Jev failover pool from config: primary backend first, then `jev.backends` whose requirements are met. */
+export function jevFromConfig(cfg: JevRoutingConfig): SystemOneClient | undefined {
+  const j = cfg.jev;
+  if (!j.enabled) return undefined;
+  const common = {
+    timeoutMs: j.timeoutMs,
+    maxRetries: j.maxRetries,
+    circuitBreakerThreshold: j.circuitBreakerThreshold,
+    circuitBreakerCooldownMs: j.circuitBreakerCooldownMs,
+  };
+  const backends: JevClientOptions[] = [];
+  if (j.baseUrl && j.model) backends.push({ ...common, name: 'primary', baseUrl: j.baseUrl, apiKey: j.apiKey, model: j.model });
+  for (const b of j.backends) {
+    if (!b.baseUrl || (b.requires && b.requires.some((r) => !r))) continue;
+    backends.push({ ...common, name: b.name, transport: b.transport, baseUrl: b.baseUrl, apiKey: b.apiKey, model: b.model, timeoutMs: b.timeoutMs ?? j.timeoutMs });
+  }
+  return backends.length ? new JevPool(backends) : undefined;
 }
 
 const round = (n: number, d = 3) => Math.round(n * 10 ** d) / 10 ** d;
