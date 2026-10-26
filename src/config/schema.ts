@@ -21,6 +21,24 @@ const ProviderBase = z.object({
   effortMap: z.partialRecord(EffortSchema, z.string()).optional(),
   timeoutMs: z.number().int().positive().optional(),
   enabled: z.boolean().default(true),
+  /** Efforts this provider may be run at (subset of low..max). Default: all efforts the catalog has. */
+  efforts: z.array(EffortSchema).optional(),
+  /**
+   * metered: pay list price. subscription: prepaid seat/quota (e.g. Claude Code Max, Antigravity).
+   * free: zero marginal cost (e.g. OpenCode free models).
+   */
+  billing: z.enum(['metered', 'subscription', 'free']).default('metered'),
+  /** Multiplier on list-price cost for ranking. Defaults: metered 1, subscription 0.15, free 0.02. */
+  costMultiplier: z.number().nonnegative().optional(),
+  /** Prompt-cache TTL in seconds; inferred from family when omitted (anthropic 300, openai 1800, google 300, deepseek 14400). */
+  cacheTtlSec: z.number().int().nonnegative().optional(),
+  /** Qualitative strengths shown to Jev when it is asked to pick a model (no numbers: Jev can't do math). */
+  strengths: z.string().optional(),
+  /** Static priors when the catalog has no data for this model. */
+  intelligence: z.number().optional(),
+  costPerTask: z.number().optional(),
+  /** Hard cap: never route here for tasks needing more than this intelligence (e.g. tiny free models). */
+  maxIntelligence: z.number().optional(),
 });
 
 export const LiteLLMProviderSchema = ProviderBase.extend({
@@ -65,15 +83,6 @@ export type LiteLLMProviderConfig = z.infer<typeof LiteLLMProviderSchema>;
 export type CliProviderConfig = z.infer<typeof CliProviderSchema>;
 export type MockProviderConfig = z.infer<typeof MockProviderSchema>;
 
-export const TierSchema = z.object({
-  /** Shown to Jev as the option description for the complexity choice. */
-  description: z.string(),
-  effort: EffortSchema.default('medium'),
-  /** Ordered provider ids: first healthy one wins, the rest are fallbacks. */
-  targets: z.array(z.string()).min(1),
-});
-export type TierConfig = z.infer<typeof TierSchema>;
-
 export const ConfigSchema = z.object({
   jev: z.object({
     baseUrl: z.string().default('https://opencode.ai/zen/v1'),
@@ -90,33 +99,48 @@ export const ConfigSchema = z.object({
       contextWindowTurns: z.number().int().positive().default(3),
       contextBudgetChars: z.number().int().positive().default(8000),
       includeAssistantTurns: z.boolean().default(false),
-      /** Below this choice confidence the default tier is used. */
-      minTierConfidence: z.number().min(0).max(1).default(0.65),
-      /** Risk score (0-based level index) at/above which human approval is required. */
-      approvalRiskScore: z.number().nonnegative().default(1.65),
-      minRiskConfidence: z.number().min(0).max(1).default(0.6),
-      /** noul probability at/above which context is pruned for the handoff. */
-      pruneThreshold: z.number().min(0).max(1).default(0.75),
-      /** noul values inside this band are treated as "unknown". */
-      uncertainBand: z.tuple([z.number(), z.number()]).default([0.3, 0.7]),
-      riskRubric: z.array(z.string()).min(2).max(10).optional(),
+      /**
+       * Quantile of Jev's difficulty distribution used as the required level.
+       * 0.5 = median (cheaper), 0.8 = conservative (default).
+       */
+      difficultyQuantile: z.number().min(0).max(1).default(0.8),
+      /** Below this confidence on taskKind, fall back to "implement". */
+      minKindConfidence: z.number().min(0).max(1).default(0.5),
+      /** Risk score (0-based level index, 0..3) at/above which human approval is required. */
+      approvalRiskScore: z.number().nonnegative().default(2.5),
+      /** Each risk level above 0 adds this many intelligence points to the requirement. */
+      riskIntelligenceBump: z.number().nonnegative().default(2),
+      /** noul probability at/above which history is considered needed. */
+      historyThreshold: z.number().min(0).max(1).default(0.5),
+      /** Ask Jev to pick among candidate models too (qualitative fit prior). */
+      askModelFit: z.boolean().default(true),
+      /** Weight of Jev's model-fit probability in ranking (0 disables). */
+      modelFitWeight: z.number().min(0).max(1).default(0.25),
     })
     .prefault({}),
   routing: z
     .object({
-      defaultTier: z.string(),
-      /** Deterministic escalation: N consecutive test failures -> escalateTier. */
-      escalateOnConsecutiveFailures: z.number().int().positive().default(3),
-      escalateTier: z.string().optional(),
-      /** Diff size (lines) above which tier is raised at least to this tier. */
-      largeDiffLines: z.number().int().positive().default(800),
-      largeDiffTier: z.string().optional(),
-      /** Ordered from cheapest to most capable; used for escalation / "at least" comparisons. */
-      tierOrder: z.array(z.string()).min(1),
-      /** Prefer the session's current (warm cache) provider when switching would cost more. */
+      /**
+       * Required Intelligence Index per difficulty level (rubric index 0..5).
+       * Calibrated against Slopalytics/AA: trivial ~20, frontier ~55.
+       */
+      intelligenceByLevel: z.array(z.number()).length(6).default([18, 28, 36, 44, 50, 55]),
+      /** Logistic spread (index points) for P(success) as a function of intelligence margin. */
+      successSpread: z.number().positive().default(4),
+      /** Minimum P(success) for a candidate to be eligible. */
+      minSuccess: z.number().min(0).max(1).default(0.55),
+      /** Ranking objective: expected cost per successful task, plus weights for time. */
+      latencyWeightUsdPerMin: z.number().nonnegative().default(0.01),
+      /** Prefer staying on the session's warm-cache provider when switching would cost more. */
       cacheAware: z.boolean().default(true),
-    }),
-  tiers: z.record(z.string(), TierSchema),
+      /** Deterministic escalation: N consecutive test failures raise the difficulty level by one. */
+      escalateOnConsecutiveFailures: z.number().int().positive().default(2),
+      /** Fallback provider ids (ordered) used when everything else fails or Jev is down. */
+      fallback: z.array(z.string()).default([]),
+      /** Restrict routing to these provider ids (empty = all enabled). */
+      only: z.array(z.string()).default([]),
+    })
+    .prefault({}),
   providers: z.record(z.string(), ProviderConfigSchema),
   catalog: z
     .object({
