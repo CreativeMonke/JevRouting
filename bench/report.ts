@@ -126,12 +126,22 @@ export function renderTable(r: Result): string {
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const { values, positionals } = parseArgs({ allowPositionals: true, options: { svg: { type: 'string', default: 'docs/cost-comparison.svg' } } });
+  const { values, positionals } = parseArgs({
+    allowPositionals: true,
+    options: { svg: { type: 'string', default: 'docs/cost-comparison.svg' }, readme: { type: 'string' } },
+  });
   const file = positionals[0];
   if (!file) throw new Error('usage: report.ts <result.json>');
   const r = JSON.parse(readFileSync(file, 'utf8')) as Result;
   mkdirSync(dirname(values.svg!), { recursive: true });
   writeFileSync(values.svg!, renderSvg(r));
-  console.log(renderTable(r));
+  const table = renderTable(r);
+  console.log(table);
   console.error(`wrote ${values.svg}`);
+  if (values.readme) {
+    const md = readFileSync(values.readme, 'utf8');
+    const block = `<!-- BENCH-TABLE:START -->\n${table}\n<!-- BENCH-TABLE:END -->`;
+    writeFileSync(values.readme, md.replace(/<!-- BENCH-TABLE:START -->[\s\S]*?<!-- BENCH-TABLE:END -->/, block));
+    console.error(`updated ${values.readme}`);
+  }
 }
