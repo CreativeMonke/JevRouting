@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:live": "JEV_LIVE=1 vitest run test/live",
-    "jev": "tsx src/cli.ts"
+    "jev": "tsx src/cli.ts",
+    "catalog:refresh": "tsx scripts/refresh-catalog-snapshot.ts"
   },
   "license": "UNLICENSED",
   "type": "module",
