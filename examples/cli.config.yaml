@@ -1,0 +1,65 @@
+# Same routing, but talking to the agent CLIs directly (no LiteLLM).
+# Used for live end-to-end tests: `jev route --config examples/cli.config.yaml "..."`.
+
+jev:
+  baseUrl: ${JEV_BASE_URL:-https://opencode.ai/zen/v1}
+  apiKey: ${JEV_API_KEY}
+  model: ${JEV_MODEL:-jev-1.13-free}
+  timeoutMs: 4000
+
+routing:
+  fallback: [opencode-openrouter-free]
+
+telemetry:
+  logFile: logs/decisions-cli.jsonl
+
+providers:
+  claude-opus:
+    kind: cli
+    preset: claude-code
+    model: claude-opus-5-5
+    catalogId: claude-opus-5-5
+    billing: subscription
+    efforts: [medium, high]
+    strengths: Strongest reasoning; architecture, hard debugging, security-sensitive work.
+  claude-sonnet:
+    kind: cli
+    preset: claude-code
+    model: claude-sonnet-5-5
+    catalogId: claude-sonnet-5-5
+    billing: subscription
+    efforts: [low, medium, high]
+    strengths: Strong all-round coder; features, refactors, tests and reviews.
+  claude-haiku:
+    kind: cli
+    preset: claude-code
+    model: claude-haiku-5-5
+    catalogId: claude-haiku-5-5
+    billing: subscription
+    efforts: [low, medium]
+    strengths: Fast and cheap; small edits, explanations, docs.
+  agy-gemini-flash:
+    kind: cli
+    preset: antigravity
+    model: gemini-3.8-flash-medium
+    catalogId: gemini-3-8-flash
+    billing: subscription
+    efforts: [medium]
+    strengths: Fast Gemini with huge context; reading large codebases, UI work.
+  opencode-glm-flash:
+    kind: cli
+    preset: opencode
+    model: opencode/glm-5.3-flash-free
+    catalogId: glm-5-3-flash
+    billing: free
+    efforts: [max]
+    maxIntelligence: 46
+    strengths: Free, capable on routine coding; slow and verbose.
+  opencode-openrouter-free:
+    kind: cli
+    preset: opencode
+    model: openrouter/openrouter/free
+    billing: free
+    intelligence: 30
+    maxIntelligence: 32
+    strengths: Free last-resort model for trivial requests.

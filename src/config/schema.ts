@@ -116,6 +116,8 @@ export const ConfigSchema = z.object({
       askModelFit: z.boolean().default(true),
       /** Weight of Jev's model-fit probability in ranking (0 disables). */
       modelFitWeight: z.number().min(0).max(1).default(0.25),
+      /** Override the 4-level risk rubric. */
+      riskRubric: z.array(z.string()).min(2).max(10).optional(),
     })
     .prefault({}),
   routing: z
@@ -128,9 +130,9 @@ export const ConfigSchema = z.object({
       /** Logistic spread (index points) for P(success) as a function of intelligence margin. */
       successSpread: z.number().positive().default(4),
       /** Minimum P(success) for a candidate to be eligible. */
-      minSuccess: z.number().min(0).max(1).default(0.55),
+      minSuccess: z.number().min(0).max(1).default(0.6),
       /** Ranking objective: expected cost per successful task, plus weights for time. */
-      latencyWeightUsdPerMin: z.number().nonnegative().default(0.01),
+      latencyWeightUsdPerMin: z.number().nonnegative().default(0.004),
       /** Prefer staying on the session's warm-cache provider when switching would cost more. */
       cacheAware: z.boolean().default(true),
       /** Deterministic escalation: N consecutive test failures raise the difficulty level by one. */
