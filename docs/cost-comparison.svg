@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 576" width="880" height="576" role="img" aria-labelledby="t d" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+<title id="t">Cost per task: claude-opus@medium vs JevRouting</title>
+<desc id="d">Across 12 tasks, claude-opus@medium cost $1.16 at API list prices and passed 12/12; JevRouting cost $0.391 and passed 12/12.</desc>
+<style>
+  .bg{fill:#fcfcfb} .t1{fill:#0b0b0b} .t2{fill:#52514e} .t3{fill:#8a8984} .grid{stroke:#e6e5e1} .axis{stroke:#c9c8c2}
+  .base{fill:#eb6834} .route{fill:#2a78d6} .link{stroke:#b9b8b2} .ring{stroke:#fcfcfb}
+  .hero{font-size:28px;font-weight:650} .lab{font-size:12px} .small{font-size:11px}
+  @media (prefers-color-scheme: dark){
+    .bg{fill:#1a1a19} .t1{fill:#f0efec} .t2{fill:#c3c2b7} .t3{fill:#8f8e86} .grid{stroke:#2c2c2a} .axis{stroke:#4a4a46}
+    .base{fill:#d95926} .route{fill:#3987e5} .link{stroke:#5a5a55} .ring{stroke:#1a1a19}
+  }
+</style>
+<rect class="bg" width="880" height="576" rx="8"/>
+<text class="t2 lab" x="24" y="30">Cost per task at API list prices · 12 auto-checked coding tasks · 2026-10-26</text>
+<text class="t1 hero" x="24" y="72">$1.16</text><text class="t2 lab" x="24" y="92">claude-opus@medium · 12/12 passed</text>
+<text class="t1 hero" x="250" y="72">$0.391</text><text class="t2 lab" x="250" y="92">JevRouting · 12/12 passed</text>
+<text class="t1 hero" x="476" y="72">−66%</text><text class="t2 lab" x="476" y="92">cost vs baseline</text>
+<text class="t1 hero" x="660" y="72">1.86×</text><text class="t2 lab" x="660" y="92">wall time vs baseline</text>
+<circle class="base" cx="150" cy="112" r="5"/><text class="t2 lab" x="160" y="116">claude-opus@medium</text>
+<circle class="route" cx="320" cy="112" r="5"/><text class="t2 lab" x="330" y="116">JevRouting (model@effort it picked)</text>
+<line class="grid" x1="150" x2="150" y1="126" y2="492"/>
+<text class="t3 small" x="150" y="510" text-anchor="middle">$0.0010</text>
+<line class="grid" x1="323.3333333333333" x2="323.3333333333333" y1="126" y2="492"/>
+<text class="t3 small" x="323.3333333333333" y="510" text-anchor="middle">$0.010</text>
+<line class="grid" x1="496.66666666666663" x2="496.66666666666663" y1="126" y2="492"/>
+<text class="t3 small" x="496.66666666666663" y="510" text-anchor="middle">$0.100</text>
+<line class="grid" x1="670" x2="670" y1="126" y2="492"/>
+<text class="t3 small" x="670" y="510" text-anchor="middle">$1.00</text>
+<text class="t3 small" x="410" y="530" text-anchor="middle">USD per task (log scale)</text>
+<text class="t1 lab" x="138" y="151" text-anchor="end">greet</text>
+<line class="link" x1="246.01480173243002" x2="516.1305963086238" y1="147" y2="147" stroke-width="2"/>
+<g><title>greet — claude-opus@medium: $0.130, passed, 3.9s</title><circle class="base ring" cx="516.1305963086238" cy="147" r="6" stroke-width="2"/></g>
+<g><title>greet — claude-haiku@low: $0.0036 list ($0.0036 marginal), passed, 9.1s</title><circle class="route ring" cx="246.01480173243002" cy="147" r="6" stroke-width="2"/></g>
+<text class="t2 small" x="686" y="151">claude-haiku@low · $0.0036</text>
+<text class="t1 lab" x="138" y="181" text-anchor="end">commit-msg</text>
+<line class="link" x1="213.24832247314546" x2="483.7912688246492" y1="177" y2="177" stroke-width="2"/>
+<g><title>commit-msg — claude-opus@medium: $0.084, passed, 3.5s</title><circle class="base ring" cx="483.7912688246492" cy="177" r="6" stroke-width="2"/></g>
+<g><title>commit-msg — claude-haiku@low: $0.0023 list ($0.0023 marginal), passed, 7.7s</title><circle class="route ring" cx="213.24832247314546" cy="177" r="6" stroke-width="2"/></g>
+<text class="t2 small" x="686" y="181">claude-haiku@low · $0.0023</text>
+<text class="t1 lab" x="138" y="211" text-anchor="end">explain-closure</text>
+<line class="link" x1="213.85347803363265" x2="484.7572012646457" y1="207" y2="207" stroke-width="2"/>
+<g><title>explain-closure — claude-opus@medium: $0.085, passed, 5.6s</title><circle class="base ring" cx="484.7572012646457" cy="207" r="6" stroke-width="2"/></g>
+<g><title>explain-closure — claude-haiku@high: $0.0023 list ($0.0023 marginal), passed, 7.7s</title><circle class="route ring" cx="213.85347803363265" cy="207" r="6" stroke-width="2"/></g>
+<text class="t2 small" x="686" y="211">claude-haiku@high · $0.0023</text>
+<text class="t1 lab" x="138" y="241" text-anchor="end">regex-email</text>
+<line class="link" x1="213.87281446923208" x2="484.84682793100836" y1="237" y2="237" stroke-width="2"/>
+<g><title>regex-email — claude-opus@medium: $0.085, passed, 4.6s</title><circle class="base ring" cx="484.84682793100836" cy="237" r="6" stroke-width="2"/></g>
+<g><title>regex-email — claude-haiku@medium: $0.0023 list ($0.0023 marginal), passed, 8.6s</title><circle class="route ring" cx="213.87281446923208" cy="237" r="6" stroke-width="2"/></g>
+<text class="t2 small" x="686" y="241">claude-haiku@medium · $0.0023</text>
+<text class="t1 lab" x="138" y="271" text-anchor="end">fizzbuzz-variant</text>
+<line class="link" x1="215.3217164886567" x2="486.0731953796416" y1="267" y2="267" stroke-width="2"/>
+<g><title>fizzbuzz-variant — claude-opus@medium: $0.087, passed, 3.8s</title><circle class="base ring" cx="486.0731953796416" cy="267" r="6" stroke-width="2"/></g>
+<g><title>fizzbuzz-variant — claude-haiku@high: $0.0024 list ($0.0024 marginal), passed, 11.6s</title><circle class="route ring" cx="215.3217164886567" cy="267" r="6" stroke-width="2"/></g>
+<text class="t2 small" x="686" y="271">claude-haiku@high · $0.0024</text>
+<text class="t1 lab" x="138" y="301" text-anchor="end">debounce</text>
+<line class="link" x1="214.62308727442831" x2="489.4100858043164" y1="297" y2="297" stroke-width="2"/>
+<g><title>debounce — claude-opus@medium: $0.091, passed, 6.4s</title><circle class="base ring" cx="489.4100858043164" cy="297" r="6" stroke-width="2"/></g>
+<g><title>debounce — claude-haiku@high: $0.0024 list ($0.0024 marginal), passed, 8.0s</title><circle class="route ring" cx="214.62308727442831" cy="297" r="6" stroke-width="2"/></g>
+<text class="t2 small" x="686" y="301">claude-haiku@high · $0.0024</text>
+<text class="t1 lab" x="138" y="331" text-anchor="end">lru</text>
+<line class="link" x1="447.09728439184863" x2="488.4709305467423" y1="327" y2="327" stroke-width="2"/>
+<g><title>lru — claude-opus@medium: $0.090, passed, 4.9s</title><circle class="base ring" cx="488.4709305467423" cy="327" r="6" stroke-width="2"/></g>
+<g><title>lru — claude-sonnet@medium: $0.052 list ($0.052 marginal), passed, 10.7s</title><circle class="route ring" cx="447.09728439184863" cy="327" r="6" stroke-width="2"/></g>
+<text class="t2 small" x="686" y="331">claude-sonnet@medium · $0.052</text>
+<text class="t1 lab" x="138" y="361" text-anchor="end">interval-merge</text>
+<line class="link" x1="462.14608759886517" x2="487.0537565525903" y1="357" y2="357" stroke-width="2"/>
+<g><title>interval-merge — claude-opus@medium: $0.088, passed, 4.1s</title><circle class="base ring" cx="487.0537565525903" cy="357" r="6" stroke-width="2"/></g>
+<g><title>interval-merge — claude-sonnet@medium: $0.063 list ($0.063 marginal), passed, 11.3s</title><circle class="route ring" cx="462.14608759886517" cy="357" r="6" stroke-width="2"/></g>
+<text class="t2 small" x="686" y="361">claude-sonnet@medium · $0.063</text>
+<text class="t1 lab" x="138" y="391" text-anchor="end">bug-find</text>
+<line class="link" x1="221.32494574362073" x2="515.7141907094294" y1="387" y2="387" stroke-width="2"/>
+<g><title>bug-find — claude-opus@medium: $0.129, passed, 7.5s</title><circle class="base ring" cx="515.7141907094294" cy="387" r="6" stroke-width="2"/></g>
+<g><title>bug-find — claude-haiku@high: $0.0026 list ($0.0026 marginal), passed, 9.9s</title><circle class="route ring" cx="221.32494574362073" cy="387" r="6" stroke-width="2"/></g>
+<text class="t2 small" x="686" y="391">claude-haiku@high · $0.0026</text>
+<text class="t1 lab" x="138" y="421" text-anchor="end">topo-sort</text>
+<line class="link" x1="469.32641604854837" x2="498.245357056476" y1="417" y2="417" stroke-width="2"/>
+<g><title>topo-sort — claude-opus@medium: $0.102, passed, 8.1s</title><circle class="base ring" cx="498.245357056476" cy="417" r="6" stroke-width="2"/></g>
+<g><title>topo-sort — claude-sonnet@high: $0.070 list ($0.070 marginal), passed, 14.1s</title><circle class="route ring" cx="469.32641604854837" cy="417" r="6" stroke-width="2"/></g>
+<text class="t2 small" x="686" y="421">claude-sonnet@high · $0.070</text>
+<text class="t1 lab" x="138" y="451" text-anchor="end">parse-duration</text>
+<line class="link" x1="436.6965552344688" x2="492.3297548942459" y1="447" y2="447" stroke-width="2"/>
+<g><title>parse-duration — claude-opus@medium: $0.094, passed, 7.2s</title><circle class="base ring" cx="492.3297548942459" cy="447" r="6" stroke-width="2"/></g>
+<g><title>parse-duration — claude-sonnet@high: $0.045 list ($0.045 marginal), passed, 11.9s</title><circle class="route ring" cx="436.6965552344688" cy="447" r="6" stroke-width="2"/></g>
+<text class="t2 small" x="686" y="451">claude-sonnet@high · $0.045</text>
+<text class="t1 lab" x="138" y="481" text-anchor="end">design-review</text>
+<line class="link" x1="489.8895159175542" x2="523.892352207184" y1="477" y2="477" stroke-width="2"/>
+<g><title>design-review — claude-opus@medium: $0.091, passed, 7.2s</title><circle class="base ring" cx="489.8895159175542" cy="477" r="6" stroke-width="2"/></g>
+<g><title>design-review — claude-opus@medium: $0.144 list ($0.144 marginal), passed, 14.1s</title><circle class="route ring" cx="523.892352207184" cy="477" r="6" stroke-width="2"/></g>
+<text class="t2 small" x="686" y="481">claude-opus@medium · $0.144</text>
+<text class="t3 small" x="24" y="550">✗ = failed the task's automatic check. Both sides run through the same agent CLIs from an empty directory.</text>
+<text class="t3 small" x="24" y="565">Costs are CLI-reported (API-equivalent) where available, else tokens × catalog prices. Routed wall time includes the Jev call.</text>
+</svg>

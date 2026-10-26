@@ -8,7 +8,7 @@ import { assessHeuristic, assessWithJev, type FitOption } from './assess.js';
 import { OutcomeStore } from './outcomes.js';
 import { buildPlan, rankCandidates } from './rank.js';
 import { SessionStore } from './session.js';
-import { estimateTokens } from './state.js';
+import { estimateTokens, redact } from './state.js';
 import type { Assessment, CatalogLookup, RoutingDecision, TaskInput } from './types.js';
 
 export interface RouterDeps {
@@ -160,7 +160,7 @@ export class Router {
       ts: new Date(this.deps.now?.() ?? Date.now()).toISOString(),
       sessionId: task.sessionId,
       promptHash: createHash('sha256').update(task.prompt).digest('hex').slice(0, 16),
-      ...(t.logState ? { prompt: task.prompt.slice(0, 2000) } : {}),
+      ...(t.logState ? { prompt: redact(task.prompt).slice(0, 2000) } : {}),
       assessment: d.assessment,
       pruneContext: d.pruneContext,
       plan: d.plan,

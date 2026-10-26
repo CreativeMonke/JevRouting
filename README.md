@@ -7,7 +7,37 @@ Providers are config, not code. Out of the box it routes across **Claude Code**,
 ![Cost per task: Opus 5.5 @ medium vs JevRouting](docs/cost-comparison.svg)
 
 <!-- BENCH-TABLE:START -->
+| Task | Expected | claude-opus@medium | Routed to | Routed cost | Pass (base / routed) |
+|---|---|---:|---|---:|:---:|
+| greet | trivial | $0.130 | claude-haiku@low (Jev L0) | $0.0036 | ✅ / ✅ |
+| commit-msg | trivial | $0.084 | claude-haiku@low (Jev L1) | $0.0023 | ✅ / ✅ |
+| explain-closure | simple | $0.085 | claude-haiku@high (Jev L2) | $0.0023 | ✅ / ✅ |
+| regex-email | simple | $0.085 | claude-haiku@medium (Jev L2) | $0.0023 | ✅ / ✅ |
+| fizzbuzz-variant | simple | $0.087 | claude-haiku@high (Jev L2) | $0.0024 | ✅ / ✅ |
+| debounce | moderate | $0.091 | claude-haiku@high (Jev L2) | $0.0024 | ✅ / ✅ |
+| lru | moderate | $0.090 | claude-sonnet@medium (Jev L3) | $0.052 | ✅ / ✅ |
+| interval-merge | moderate | $0.088 | claude-sonnet@medium (Jev L3) | $0.063 | ✅ / ✅ |
+| bug-find | moderate | $0.129 | claude-haiku@high (Jev L2) | $0.0026 | ✅ / ✅ |
+| topo-sort | hard | $0.102 | claude-sonnet@high (Jev L3) | $0.070 | ✅ / ✅ |
+| parse-duration | hard | $0.094 | claude-sonnet@high (Jev L3) | $0.045 | ✅ / ✅ |
+| design-review | hard | $0.091 | claude-opus@medium (Jev L5) | $0.144 | ✅ / ✅ |
+| **Total** | | **$1.16** | | **$0.391** (−66%) | 12/12 / 12/12 |
 <!-- BENCH-TABLE:END -->
+
+**How to read this.** This is 12 real coding requests, each run once through Claude Code on Opus 5.5 at `medium` effort, and once through JevRouting, which used local Clef as Jev and the [CLI config](examples/cli.config.yaml). Both sides start from an empty directory. Every answer is checked automatically; the code answers are executed against test cases. Costs are what Claude Code reports, at API-equivalent prices. Three iterations of the cost model on the same tasks and baseline ([`bench/results/`](bench/results)):
+
+| Run | Change | Routed total | vs Opus@medium | Pass |
+|---|---|---:|---:|:---:|
+| 1 | initial model | $0.534 | −54% | 12/12 |
+| 2 | + harness-token overhead (~17.5K tokens per Claude Code call) | $0.611 | −47% | 12/12 |
+| 3 | + one-shot thinking tokens per effort, provider cooldowns, Haiku@high allowed | **$0.391** | **−66%** | 12/12 |
+
+Run 2 got *worse*. Once the fixed harness overhead was in the model, the price gap between efforts looked negligible, so the router drifted to Sonnet@high. Run 3 models the thinking tokens that higher efforts spend even on short answers, and that pushed simple and moderate work down to Haiku. Caveats:
+
+- The suite is small and every task is a one-shot. Agentic, multi-turn work is where warm caches and context pruning matter, and this benchmark doesn't exercise them.
+- Routed wall time includes the local Jev call, about 4.6 s on an M4. Hosted Jev is about 0.1–0.2 s.
+- Free OpenCode models were in cooldown (quota exhausted) during these runs. With quota available, the router sends some of this work to them at $0 marginal cost.
+- Reproduce with `npm run bench -- --baseline-from bench/results/run1.json` (reuses the Opus baseline) and `npm run bench:report -- <result.json> --readme README.md`.
 
 ## How a request is routed
 

@@ -125,7 +125,7 @@ describe('CliProvider', () => {
       providerId: 'claude',
       model: 'claude-opus-5-5',
       costUsd: 0.0123,
-      usage: { inputTokens: 7, outputTokens: 3, cachedInputTokens: 5000 },
+      usage: { inputTokens: 5007, outputTokens: 3, cachedInputTokens: 5000 },
       raw: { session_id: 'sess-1' },
     });
   });

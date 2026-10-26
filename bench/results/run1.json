@@ -1,0 +1,397 @@
+{
+  "when": "2026-10-26T23:25:08.679Z",
+  "config": "examples/cli.config.yaml",
+  "baseline": "claude-opus@medium",
+  "catalog": {
+    "origin": "cache",
+    "ageHours": 0.11578444444444444,
+    "warnings": [],
+    "secondaryModels": 2103
+  },
+  "rows": [
+    {
+      "task": "greet",
+      "expected": "trivial",
+      "baseline": {
+        "providerId": "claude-opus",
+        "effort": "medium",
+        "ok": true,
+        "passed": true,
+        "latencyMs": 3941,
+        "listUsd": 0.1295066,
+        "marginalUsd": 0.1295066,
+        "costSource": "reported",
+        "chars": 4
+      },
+      "routed": {
+        "providerId": "claude-haiku",
+        "effort": "low",
+        "ok": true,
+        "passed": true,
+        "latencyMs": 6664,
+        "listUsd": 0.0027889,
+        "marginalUsd": 0.0027889,
+        "costSource": "reported",
+        "chars": 4,
+        "assessment": {
+          "source": "jev",
+          "level": 0,
+          "required": 18,
+          "kind": "implement"
+        }
+      }
+    },
+    {
+      "task": "commit-msg",
+      "expected": "trivial",
+      "baseline": {
+        "providerId": "claude-opus",
+        "effort": "medium",
+        "ok": true,
+        "passed": true,
+        "latencyMs": 3481,
+        "listUsd": 0.0842789,
+        "marginalUsd": 0.0842789,
+        "costSource": "reported",
+        "chars": 42
+      },
+      "routed": {
+        "providerId": "claude-haiku",
+        "effort": "low",
+        "ok": true,
+        "passed": true,
+        "latencyMs": 7455,
+        "listUsd": 0.0023153300000000004,
+        "marginalUsd": 0.0023153300000000004,
+        "costSource": "reported",
+        "chars": 56,
+        "assessment": {
+          "source": "jev",
+          "level": 1,
+          "required": 28,
+          "kind": "docs"
+        }
+      }
+    },
+    {
+      "task": "explain-closure",
+      "expected": "simple",
+      "baseline": {
+        "providerId": "claude-opus",
+        "effort": "medium",
+        "ok": true,
+        "passed": true,
+        "latencyMs": 5571,
+        "listUsd": 0.08536730000000001,
+        "marginalUsd": 0.08536730000000001,
+        "costSource": "reported",
+        "chars": 288
+      },
+      "routed": {
+        "providerId": "claude-sonnet",
+        "effort": "medium",
+        "ok": true,
+        "passed": true,
+        "latencyMs": 9416,
+        "listUsd": 0.04978930000000001,
+        "marginalUsd": 0.04978930000000001,
+        "costSource": "reported",
+        "chars": 325,
+        "assessment": {
+          "source": "jev",
+          "level": 2,
+          "required": 36,
+          "kind": "implement"
+        }
+      }
+    },
+    {
+      "task": "regex-email",
+      "expected": "simple",
+      "baseline": {
+        "providerId": "claude-opus",
+        "effort": "medium",
+        "ok": true,
+        "passed": true,
+        "latencyMs": 4607,
+        "listUsd": 0.08546899999999999,
+        "marginalUsd": 0.08546899999999999,
+        "costSource": "reported",
+        "chars": 113
+      },
+      "routed": {
+        "providerId": "claude-haiku",
+        "effort": "medium",
+        "ok": true,
+        "passed": true,
+        "latencyMs": 7397,
+        "listUsd": 0.00233863,
+        "marginalUsd": 0.00233863,
+        "costSource": "reported",
+        "chars": 86,
+        "assessment": {
+          "source": "jev",
+          "level": 2,
+          "required": 36,
+          "kind": "implement"
+        }
+      }
+    },
+    {
+      "task": "fizzbuzz-variant",
+      "expected": "simple",
+      "baseline": {
+        "providerId": "claude-opus",
+        "effort": "medium",
+        "ok": true,
+        "passed": true,
+        "latencyMs": 3815,
+        "listUsd": 0.0868728,
+        "marginalUsd": 0.0868728,
+        "costSource": "reported",
+        "chars": 279
+      },
+      "routed": {
+        "providerId": "claude-sonnet",
+        "effort": "medium",
+        "ok": true,
+        "passed": true,
+        "latencyMs": 9261,
+        "listUsd": 0.0435268,
+        "marginalUsd": 0.0435268,
+        "costSource": "reported",
+        "chars": 279,
+        "assessment": {
+          "source": "jev",
+          "level": 2,
+          "required": 36,
+          "kind": "implement"
+        }
+      }
+    },
+    {
+      "task": "debounce",
+      "expected": "moderate",
+      "baseline": {
+        "providerId": "claude-opus",
+        "effort": "medium",
+        "ok": true,
+        "passed": true,
+        "latencyMs": 6384,
+        "listUsd": 0.09081030000000001,
+        "marginalUsd": 0.09081030000000001,
+        "costSource": "reported",
+        "chars": 269
+      },
+      "routed": {
+        "providerId": "claude-sonnet",
+        "effort": "medium",
+        "ok": true,
+        "passed": true,
+        "latencyMs": 9630,
+        "listUsd": 0.0433443,
+        "marginalUsd": 0.0433443,
+        "costSource": "reported",
+        "chars": 276,
+        "assessment": {
+          "source": "jev",
+          "level": 2,
+          "required": 36,
+          "kind": "implement"
+        }
+      }
+    },
+    {
+      "task": "lru",
+      "expected": "moderate",
+      "baseline": {
+        "providerId": "claude-opus",
+        "effort": "medium",
+        "ok": true,
+        "passed": true,
+        "latencyMs": 4886,
+        "listUsd": 0.08968439999999998,
+        "marginalUsd": 0.08968439999999998,
+        "costSource": "reported",
+        "chars": 627
+      },
+      "routed": {
+        "providerId": "claude-sonnet",
+        "effort": "medium",
+        "ok": true,
+        "passed": true,
+        "latencyMs": 8605,
+        "listUsd": 0.0447044,
+        "marginalUsd": 0.0447044,
+        "costSource": "reported",
+        "chars": 633,
+        "assessment": {
+          "source": "jev",
+          "level": 3,
+          "required": 44,
+          "kind": "implement"
+        }
+      }
+    },
+    {
+      "task": "interval-merge",
+      "expected": "moderate",
+      "baseline": {
+        "providerId": "claude-opus",
+        "effort": "medium",
+        "ok": true,
+        "passed": true,
+        "latencyMs": 4092,
+        "listUsd": 0.0880118,
+        "marginalUsd": 0.0880118,
+        "costSource": "reported",
+        "chars": 450
+      },
+      "routed": {
+        "providerId": "claude-sonnet",
+        "effort": "medium",
+        "ok": true,
+        "passed": true,
+        "latencyMs": 9341,
+        "listUsd": 0.0438058,
+        "marginalUsd": 0.0438058,
+        "costSource": "reported",
+        "chars": 387,
+        "assessment": {
+          "source": "jev",
+          "level": 3,
+          "required": 44,
+          "kind": "implement"
+        }
+      }
+    },
+    {
+      "task": "bug-find",
+      "expected": "moderate",
+      "baseline": {
+        "providerId": "claude-opus",
+        "effort": "medium",
+        "ok": true,
+        "passed": true,
+        "latencyMs": 7511,
+        "listUsd": 0.1287922,
+        "marginalUsd": 0.1287922,
+        "costSource": "reported",
+        "chars": 721
+      },
+      "routed": {
+        "providerId": "claude-sonnet",
+        "effort": "medium",
+        "ok": true,
+        "passed": true,
+        "latencyMs": 11357,
+        "listUsd": 0.06287770000000001,
+        "marginalUsd": 0.06287770000000001,
+        "costSource": "reported",
+        "chars": 369,
+        "assessment": {
+          "source": "jev",
+          "level": 2,
+          "required": 36,
+          "kind": "implement"
+        }
+      }
+    },
+    {
+      "task": "topo-sort",
+      "expected": "hard",
+      "baseline": {
+        "providerId": "claude-opus",
+        "effort": "medium",
+        "ok": true,
+        "passed": true,
+        "latencyMs": 8117,
+        "listUsd": 0.1021193,
+        "marginalUsd": 0.1021193,
+        "costSource": "reported",
+        "chars": 1681
+      },
+      "routed": {
+        "providerId": "claude-sonnet",
+        "effort": "medium",
+        "ok": true,
+        "passed": true,
+        "latencyMs": 13384,
+        "listUsd": 0.06912579999999999,
+        "marginalUsd": 0.06912579999999999,
+        "costSource": "reported",
+        "chars": 1690,
+        "assessment": {
+          "source": "jev",
+          "level": 3,
+          "required": 44,
+          "kind": "implement"
+        }
+      }
+    },
+    {
+      "task": "parse-duration",
+      "expected": "hard",
+      "baseline": {
+        "providerId": "claude-opus",
+        "effort": "medium",
+        "ok": true,
+        "passed": true,
+        "latencyMs": 7211,
+        "listUsd": 0.09440159999999999,
+        "marginalUsd": 0.09440159999999999,
+        "costSource": "reported",
+        "chars": 366
+      },
+      "routed": {
+        "providerId": "claude-sonnet",
+        "effort": "medium",
+        "ok": true,
+        "passed": true,
+        "latencyMs": 9059,
+        "listUsd": 0.0446366,
+        "marginalUsd": 0.0446366,
+        "costSource": "reported",
+        "chars": 372,
+        "assessment": {
+          "source": "jev",
+          "level": 3,
+          "required": 44,
+          "kind": "implement"
+        }
+      }
+    },
+    {
+      "task": "design-review",
+      "expected": "hard",
+      "baseline": {
+        "providerId": "claude-opus",
+        "effort": "medium",
+        "ok": true,
+        "passed": true,
+        "latencyMs": 7154,
+        "listUsd": 0.0913905,
+        "marginalUsd": 0.0913905,
+        "costSource": "reported",
+        "chars": 1055
+      },
+      "routed": {
+        "providerId": "claude-opus",
+        "effort": "medium",
+        "ok": true,
+        "passed": true,
+        "latencyMs": 14488,
+        "listUsd": 0.12486829999999999,
+        "marginalUsd": 0.12486829999999999,
+        "costSource": "reported",
+        "chars": 1043,
+        "assessment": {
+          "source": "jev",
+          "level": 5,
+          "required": 55,
+          "kind": "implement"
+        }
+      }
+    }
+  ]
+}
