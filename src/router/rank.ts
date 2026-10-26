@@ -11,6 +11,8 @@ import type { Assessment, Candidate, CatalogLookup, TaskInput } from './types.js
 const OUTPUT_TOKENS = [80, 400, 1500, 5000];
 /** Fraction of an Artificial Analysis benchmark task an agentic job of this size resembles. */
 const AGENTIC_SCALE = [0.15, 0.35, 0.7, 1.2];
+/** One-shot thinking tokens as a fraction of the variant's benchmark tokens-per-task. */
+const THINKING_FRACTION = 0.06;
 /** Fallback median output tokens/task across the catalog (Oct 2026 ≈ 30k). */
 const DEFAULT_MEDIAN_TOKENS = 30_000;
 
@@ -141,7 +143,10 @@ export function rankCandidates(task: TaskInput, a: Assessment, ctx: RankContext,
       const prefill = ((ctxTokens + harnessTokens(p)) * prefillRate) / 1e6;
 
       const verbosity = Math.min(4, Math.max(0.25, (v?.tokensPerTask ?? median) / median));
-      const oneShot = pricing ? prefill + (outTokens * verbosity * pricing.output) / 1e6 : undefined;
+      // Reasoning models think before answering even one-shot questions; higher efforts think more.
+      // Calibrated on the bench (Sonnet 5.5 medium→high ≈ +1.8K output tokens on short tasks).
+      const thinking = THINKING_FRACTION * (v?.tokensPerTask ?? median);
+      const oneShot = pricing ? prefill + ((outTokens * verbosity + thinking) * pricing.output) / 1e6 : undefined;
       const perTask = v?.costPerTask ?? p.costPerTask;
       const agenticCost = perTask !== undefined ? perTask * agenticScale + prefill : oneShot !== undefined ? oneShot * 8 : undefined;
 
