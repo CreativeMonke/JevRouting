@@ -1,3 +1,4 @@
+import { familyFromModelId } from '../catalog/names.js';
 import type { CatalogPricing, CatalogVariant } from '../catalog/types.js';
 import type { JevRoutingConfig, ProviderConfig } from '../config/schema.js';
 import { EFFORTS, type Effort } from '../providers/types.js';
@@ -10,6 +11,8 @@ import type { Assessment, Candidate, CatalogLookup, TaskInput } from './types.js
 const OUTPUT_TOKENS = [80, 400, 1500, 5000];
 /** Fraction of an Artificial Analysis benchmark task an agentic job of this size resembles. */
 const AGENTIC_SCALE = [0.15, 0.35, 0.7, 1.2];
+/** One-shot thinking tokens as a fraction of the variant's benchmark tokens-per-task. */
+const THINKING_FRACTION = 0.06;
 /** Fallback median output tokens/task across the catalog (Oct 2026 ≈ 30k). */
 const DEFAULT_MEDIAN_TOKENS = 30_000;
 
@@ -19,16 +22,19 @@ const DEFAULT_TTL_SEC: Record<string, number> = {
   google: 300,
   deepseek: 14_400,
 };
+/** Harness overhead (system prompt + tools) per agent CLI call, in tokens. claude-code measured (bench, Oct 2026); others estimated. */
+const HARNESS_TOKENS: Record<string, number> = { 'claude-code': 17_500, opencode: 9_000, antigravity: 12_000 };
+
+export function harnessTokens(p: ProviderConfig): number {
+  if (p.harnessTokens !== undefined) return p.harnessTokens;
+  return p.kind === 'cli' && p.preset ? (HARNESS_TOKENS[p.preset] ?? 0) : 0;
+}
+
 const DEFAULT_COST_MULTIPLIER = { metered: 1, subscription: 0.15, free: 0.02 } as const;
 
-/** Slopalytics family slug for a provider model id: strip routing prefixes and -free, dots -> dashes. */
+/** Slopalytics family slug for a provider: explicit catalogId, else derived from the model id. */
 export function catalogFamily(p: ProviderConfig): string {
-  if (p.catalogId) return p.catalogId;
-  const last = p.model.split('/').pop() ?? p.model;
-  return last
-    .toLowerCase()
-    .replace(/(:free|-free)$/, '')
-    .replace(/\./g, '-');
+  return p.catalogId ?? familyFromModelId(p.model);
 }
 
 export function inferFamilyKind(p: ProviderConfig): string {
@@ -51,6 +57,14 @@ function interp(table: number[], x: number): number {
 }
 
 const sigmoid = (x: number) => 1 / (1 + Math.exp(-x));
+
+/** P(model of intelligence I is good enough), integrated over Jev's difficulty distribution. */
+export function capability(I: number, a: Assessment, spread: number): number {
+  const req = a.requiredByLevel;
+  const total = a.difficulty.reduce((x, y) => x + y, 0);
+  if (!req || total <= 0) return sigmoid((I - a.requiredIntelligence) / spread);
+  return a.difficulty.reduce((acc, p, i) => acc + (p / total) * sigmoid((I - req[i]!) / spread), 0);
+}
 
 function resolvePricing(p: ProviderConfig, v: CatalogVariant | undefined, catalog: CatalogLookup | undefined, family: string): CatalogPricing | undefined {
   if (p.pricing) return p.pricing;
@@ -125,10 +139,14 @@ export function rankCandidates(task: TaskInput, a: Assessment, ctx: RankContext,
 
       // Prefill: the plan's stay-vs-switch term. Warm cache -> read price; cold -> write price.
       const prefillRate = pricing ? (warm ? pricing.cacheRead : pricing.cacheWrite || pricing.input) : 0;
-      const prefill = (ctxTokens * prefillRate) / 1e6;
+      // Agent CLIs prepend their own system prompt + tool schemas on every call (measured: Claude Code ≈17.5K tokens).
+      const prefill = ((ctxTokens + harnessTokens(p)) * prefillRate) / 1e6;
 
       const verbosity = Math.min(4, Math.max(0.25, (v?.tokensPerTask ?? median) / median));
-      const oneShot = pricing ? prefill + (outTokens * verbosity * pricing.output) / 1e6 : undefined;
+      // Reasoning models think before answering even one-shot questions; higher efforts think more.
+      // Calibrated on the bench (Sonnet 5.5 medium→high ≈ +1.8K output tokens on short tasks).
+      const thinking = THINKING_FRACTION * (v?.tokensPerTask ?? median);
+      const oneShot = pricing ? prefill + ((outTokens * verbosity + thinking) * pricing.output) / 1e6 : undefined;
       const perTask = v?.costPerTask ?? p.costPerTask;
       const agenticCost = perTask !== undefined ? perTask * agenticScale + prefill : oneShot !== undefined ? oneShot * 8 : undefined;
 
@@ -148,7 +166,7 @@ export function rankCandidates(task: TaskInput, a: Assessment, ctx: RankContext,
 
       const priorRel = usage?.completionRate !== undefined ? Math.min(1, Math.max(0.5, usage.completionRate / 0.97)) : 0.95;
       const reliability = outcomes ? outcomes.reliability(id, effort, priorRel) : priorRel;
-      const pSuccess = sigmoid((I - a.requiredIntelligence) / cfg.routing.successSpread) * reliability;
+      const pSuccess = capability(I, a, cfg.routing.successSpread) * reliability;
 
       const latencyPenalty = cfg.routing.latencyWeightUsdPerMin * (1 + 3 * a.latencySensitive) * expectedMinutes;
       let objective = (attemptCost + latencyPenalty) / Math.max(pSuccess, 1e-3);
@@ -159,6 +177,11 @@ export function rankCandidates(task: TaskInput, a: Assessment, ctx: RankContext,
       }
 
       let eligible = intelligence !== undefined && !reasons.includes('no pricing data');
+      const cooling = outcomes?.coolingDown(id);
+      if (cooling) {
+        eligible = false;
+        reasons.push(`unavailable: ${cooling}`);
+      }
       if (pSuccess < cfg.routing.minSuccess) {
         eligible = false;
         reasons.push(`P(success) ${pSuccess.toFixed(2)} < ${cfg.routing.minSuccess}`);
