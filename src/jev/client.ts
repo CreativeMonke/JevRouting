@@ -25,6 +25,14 @@ export interface JevClientOptions {
   circuitBreakerThreshold?: number;
   circuitBreakerCooldownMs?: number;
   headers?: Record<string, string>;
+  /**
+   * systemone: POST {baseUrl}/systemone (TypeSafe, OpenCode Zen, LiteLLM, self-hosted Clef).
+   * workers-ai: POST {baseUrl}/ai/run/@cf/cloudflare/{model} with Cloudflare's {result} envelope
+   *   (baseUrl = https://api.cloudflare.com/client/v4/accounts/<account id>).
+   */
+  transport?: 'systemone' | 'workers-ai';
+  /** Label used in logs / pool errors. */
+  name?: string;
   fetch?: typeof fetch;
   now?: () => number;
 }
@@ -43,10 +51,12 @@ export interface SystemOneResult<Q extends JevQuestions> extends JevResponse<Q> 
 
 /** Thin, dependency-free client for the Jev System One endpoint. */
 export class JevClient {
-  private readonly opts: Required<Omit<JevClientOptions, 'apiKey' | 'headers'>> &
-    Pick<JevClientOptions, 'apiKey' | 'headers'>;
+  private readonly opts: Required<Omit<JevClientOptions, 'apiKey' | 'headers' | 'name'>> &
+    Pick<JevClientOptions, 'apiKey' | 'headers' | 'name'>;
   private failures = 0;
   private openUntil = 0;
+  /** Set from a 429's Retry-After so we stop hammering a rate-limited backend. */
+  private limitedUntil = 0;
 
   constructor(opts: JevClientOptions) {
     this.opts = {
@@ -54,6 +64,7 @@ export class JevClient {
       maxRetries: 1,
       circuitBreakerThreshold: 3,
       circuitBreakerCooldownMs: 30_000,
+      transport: 'systemone',
       fetch: globalThis.fetch.bind(globalThis),
       now: Date.now,
       ...opts,
@@ -65,13 +76,20 @@ export class JevClient {
     return this.opts.model;
   }
 
+  get name(): string {
+    return this.opts.name ?? `${this.opts.baseUrl}#${this.opts.model}`;
+  }
+
+  /** True while the breaker is open or the backend told us to back off (429 Retry-After). */
   get circuitOpen(): boolean {
-    return this.opts.now() < this.openUntil;
+    const now = this.opts.now();
+    return now < this.openUntil || now < this.limitedUntil;
   }
 
   async systemOne<const Q extends JevQuestions>(call: SystemOneCall<Q>): Promise<SystemOneResult<Q>> {
     if (this.circuitOpen) {
-      throw new JevError('Jev circuit breaker open');
+      const why = this.opts.now() < this.limitedUntil ? 'rate limited' : 'circuit breaker open';
+      throw new JevError(`Jev ${why} (${this.name})`);
     }
     const body: JevRequest = {
       model: call.model ?? this.opts.model,
@@ -87,6 +105,10 @@ export class JevClient {
         return res as SystemOneResult<Q>;
       } catch (err) {
         lastErr = err;
+        if (err instanceof JevError && err.status === 429) {
+          this.limitedUntil = this.opts.now() + Math.min(err.retryAfterSec ?? 60, 6 * 3600) * 1000;
+          throw err;
+        }
         const retryable =
           !(err instanceof JevError) || err.status === undefined || err.status >= 500;
         if (!retryable) break;
@@ -111,7 +133,11 @@ export class JevClient {
     const timer = setTimeout(() => ctrl.abort(), this.opts.timeoutMs);
     let res: Response;
     try {
-      res = await this.opts.fetch(`${this.opts.baseUrl}/systemone`, {
+      const url =
+        this.opts.transport === 'workers-ai'
+          ? `${this.opts.baseUrl}/ai/run/@cf/cloudflare/${encodeURIComponent(body.model)}`
+          : `${this.opts.baseUrl}/systemone`;
+      res = await this.opts.fetch(url, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
@@ -144,6 +170,9 @@ export class JevClient {
         json,
         Number.isFinite(ra) && ra > 0 ? ra : undefined,
       );
+    }
+    if (this.opts.transport === 'workers-ai' && json && typeof json === 'object' && 'result' in json) {
+      json = (json as { result: unknown }).result;
     }
     if (!isJevResponse(json)) {
       throw new JevError('Jev returned an unexpected response shape', res.status, json);

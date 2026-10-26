@@ -85,14 +85,34 @@ export type MockProviderConfig = z.infer<typeof MockProviderSchema>;
 
 export const ConfigSchema = z.object({
   jev: z.object({
-    baseUrl: z.string().default('https://opencode.ai/zen/v1'),
+    /** Optional primary backend; most configs list everything under `backends` instead. */
+    baseUrl: z.string().optional(),
     apiKey: z.string().optional(),
-    model: z.string().default('jev-1.13-free'),
+    model: z.string().optional(),
     timeoutMs: z.number().int().positive().default(3000),
     maxRetries: z.number().int().nonnegative().default(1),
     circuitBreakerThreshold: z.number().int().nonnegative().default(3),
     circuitBreakerCooldownMs: z.number().int().nonnegative().default(30_000),
     enabled: z.boolean().default(true),
+    /**
+     * Extra Jev-compatible backends tried in order after the primary one (failover on
+     * 429 / timeouts / breaker). A backend whose required fields are empty is skipped,
+     * so you can leave e.g. Cloudflare in the config and enable it just by setting env vars.
+     */
+    backends: z
+      .array(
+        z.object({
+          name: z.string().optional(),
+          transport: z.enum(['systemone', 'workers-ai']).default('systemone'),
+          baseUrl: z.string().optional(),
+          apiKey: z.string().optional(),
+          model: z.string(),
+          /** Skip unless this is set (e.g. a Cloudflare account id). */
+          requires: z.array(z.string().optional()).optional(),
+          timeoutMs: z.number().int().positive().optional(),
+        }),
+      )
+      .default([]),
   }),
   classifier: z
     .object({
@@ -150,6 +170,24 @@ export const ConfigSchema = z.object({
       cacheDir: z.string().optional(),
       maxAgeHours: z.number().positive().default(24),
       slopalyticsUrl: z.string().default('https://slopalytics.com'),
+      /** Data sources, merged in order: Slopalytics is primary; the others only fill gaps. */
+      sources: z
+        .object({
+          slopalytics: z.object({ enabled: z.boolean().default(true) }).prefault({}),
+          /** models.dev: public pricing incl. cache read/write, context, effort levels. */
+          modelsDev: z
+            .object({ enabled: z.boolean().default(true), url: z.string().default('https://models.dev/api.json') })
+            .prefault({}),
+          /** Artificial Analysis API: intelligence scores for models Slopalytics lacks (needs a key). */
+          artificialAnalysis: z
+            .object({
+              enabled: z.boolean().default(false),
+              apiKey: z.string().optional(),
+              url: z.string().default('https://artificialanalysis.ai/api/v2/data/llms/models'),
+            })
+            .prefault({}),
+        })
+        .prefault({}),
     })
     .prefault({}),
   telemetry: z

@@ -1,4 +1,4 @@
-import { choice, noul, score, type JevClient, type JevQuestions, type ScoreAnswer } from '../jev/index.js';
+import { choice, noul, score, type JevQuestions, type ScoreAnswer, type SystemOneClient } from '../jev/index.js';
 import type { JevRoutingConfig } from '../config/schema.js';
 import { buildJevState, estimateTokens } from './state.js';
 import { TASK_KINDS, type Assessment, type TaskInput, type TaskKind } from './types.js';
@@ -125,7 +125,7 @@ export function finalize(
 }
 
 export async function assessWithJev(
-  jev: JevClient,
+  jev: SystemOneClient,
   task: TaskInput,
   cfg: Cfg,
   fitOptions: FitOption[] = [],

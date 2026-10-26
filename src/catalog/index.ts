@@ -5,3 +5,5 @@ export * from './store.js';
 export * from './refresh.js';
 export * from './snapshot.js';
 export { CatalogLockedError, catalogPaths, defaultCacheDir } from './cache.js';
+export * from './secondary.js';
+export * from './merged.js';
