@@ -28,6 +28,7 @@ const ClaudeJsonSchema = z.object({
       input_tokens: z.number().optional(),
       output_tokens: z.number().optional(),
       cache_read_input_tokens: z.number().optional(),
+      cache_creation_input_tokens: z.number().optional(),
     })
     .optional(),
 });
@@ -76,8 +77,10 @@ function parseClaudeJson(stdout: string): ParsedCliOutput {
   return {
     text: data.result?.trim() ?? '',
     costUsd: data.total_cost_usd,
+    // Claude reports fresh, cache-read and cache-write input separately; inputTokens is their sum.
     usage: data.usage && {
-      inputTokens: data.usage.input_tokens,
+      inputTokens:
+        (data.usage.input_tokens ?? 0) + (data.usage.cache_read_input_tokens ?? 0) + (data.usage.cache_creation_input_tokens ?? 0),
       outputTokens: data.usage.output_tokens,
       cachedInputTokens: data.usage.cache_read_input_tokens,
     },
