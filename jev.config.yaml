@@ -1,0 +1,86 @@
+# JevRouting config. Strings support ${ENV_VAR} and ${ENV_VAR:-default}.
+#
+# Every provider is a candidate. For each provider x effort the router looks up
+# intelligence / cost-per-task / prices in the Slopalytics catalog (cached
+# locally, refreshed daily) and picks the cheapest expected cost per successful
+# task that clears the intelligence Jev estimates the task needs.
+#
+# To swap a backend, change `model` (and `catalogId` if the slug differs) or add
+# a provider block. `kind: litellm` talks to your LiteLLM proxy; `kind: cli`
+# shells out to the agent CLI directly; `kind: mock` is for tests.
+
+jev:
+  baseUrl: ${JEV_BASE_URL:-https://opencode.ai/zen/v1}
+  apiKey: ${JEV_API_KEY}
+  model: ${JEV_MODEL:-jev-1.13-free}
+  timeoutMs: 4000
+
+classifier:
+  difficultyQuantile: 0.8     # lean toward stronger models when Jev is unsure
+  askModelFit: true
+  modelFitWeight: 0.25
+
+routing:
+  intelligenceByLevel: [18, 28, 36, 44, 50, 55]
+  successSpread: 4
+  minSuccess: 0.6
+  latencyWeightUsdPerMin: 0.004   # USD you would pay to save one minute of waiting
+  fallback: [claude-sonnet]
+
+catalog:
+  maxAgeHours: 24
+
+telemetry:
+  logFile: ${JEV_LOG_FILE:-logs/decisions.jsonl}
+
+providers:
+  # --- Claude Code (subscription) via LiteLLM ---------------------------------
+  claude-opus:
+    kind: litellm
+    model: ${LITELLM_CLAUDE_OPUS:-claudecode/claude-opus-5-5}
+    catalogId: claude-opus-5-5
+    billing: subscription
+    efforts: [medium, high, xhigh]
+    strengths: Strongest reasoning; architecture, hard debugging, security-sensitive and ambiguous work.
+  claude-sonnet:
+    kind: litellm
+    model: ${LITELLM_CLAUDE_SONNET:-claudecode/claude-sonnet-5-5}
+    catalogId: claude-sonnet-5-5
+    billing: subscription
+    efforts: [low, medium, high, xhigh]
+    strengths: Strong all-round coder; multi-file features, refactors, tests and reviews.
+  claude-haiku:
+    kind: litellm
+    model: ${LITELLM_CLAUDE_HAIKU:-claudecode/claude-haiku-5-5}
+    catalogId: claude-haiku-5-5
+    billing: subscription
+    efforts: [low, medium, high]
+    strengths: Fast and cheap; small edits, explanations, docs, commit messages.
+
+  # --- Antigravity (subscription) via LiteLLM ---------------------------------
+  agy-gemini-flash:
+    kind: litellm
+    model: ${LITELLM_AGY_FLASH:-antigravity/gemini-3.8-flash}
+    catalogId: gemini-3-8-flash
+    billing: subscription
+    efforts: [low, medium, high]
+    strengths: Fast Gemini model with huge context; good for reading large codebases and UI work.
+
+  # --- OpenCode free models via LiteLLM ---------------------------------------
+  opencode-glm-flash:
+    kind: litellm
+    model: ${LITELLM_OC_GLM:-opencode/glm-5.3-flash-free}
+    catalogId: glm-5-3-flash
+    billing: free
+    efforts: [max]
+    effortMap: { max: high }
+    maxIntelligence: 46
+    strengths: Free, capable on routine coding; slow and verbose.
+  opencode-deepseek-flash:
+    kind: litellm
+    model: ${LITELLM_OC_DEEPSEEK:-opencode/deepseek-v4.1-flash-free}
+    catalogId: deepseek-v4-1-flash
+    billing: free
+    efforts: [max]
+    maxIntelligence: 44
+    strengths: Free, quick; reviews, docs and simple implementation.
