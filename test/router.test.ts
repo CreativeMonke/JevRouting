@@ -13,6 +13,10 @@ import {
   Router,
   SessionStore,
   OutcomeStore,
+  buildQuestions,
+  capability,
+  floorAt,
+  shiftUp,
   type Assessment,
 } from '../src/router/index.js';
 import { fakeCatalog } from './helpers/fake-catalog.js';
@@ -168,6 +172,27 @@ describe('ranking', () => {
   });
 });
 
+describe('question sets and distribution math', () => {
+  it('extended set adds kind + latency', () => {
+    expect(Object.keys(buildQuestions([], { extended: true }))).toEqual(
+      expect.arrayContaining(['difficulty', 'outputSize', 'agentic', 'needsHistory', 'risk', 'kind', 'latencySensitive']),
+    );
+    expect(buildQuestions([])).not.toHaveProperty('kind');
+  });
+  it('shiftUp / floorAt move mass, keep the total', () => {
+    expect(shiftUp([0.5, 0.5, 0, 0, 0, 0], 1)).toEqual([0, 0.5, 0.5, 0, 0, 0]);
+    expect(shiftUp([0, 0, 0, 0, 0.5, 0.5], 1)).toEqual([0, 0, 0, 0, 0, 1]);
+    floorAt([0.2, 0.3, 0.1, 0.4, 0, 0], 3).forEach((v, i) => expect(v).toBeCloseTo(i === 3 ? 1 : 0));
+  });
+  it('capability integrates over the distribution', () => {
+    const a = assessment({ difficulty: [0, 0, 0.5, 0, 0, 0.5], requiredByLevel: [18, 28, 36, 44, 50, 55], requiredIntelligence: 55 });
+    const p = capability(45, a, 4);
+    // ~half the mass is easy for a 45 model, half is far out of reach
+    expect(p).toBeGreaterThan(0.45);
+    expect(p).toBeLessThan(0.55);
+  });
+});
+
 describe('heuristic assessor', () => {
   const cfg = baseConfig();
   it('classifies obvious cases', () => {
@@ -201,7 +226,7 @@ describe('Router', () => {
     expect(opus.calls[0]!.effort).toBeDefined();
     const body = JSON.parse((fetch.mock.calls[0] as any)[1].body);
     expect(Object.keys(body.questions)).toEqual(
-      expect.arrayContaining(['difficulty', 'kind', 'outputSize', 'agentic', 'needsHistory', 'risk', 'latencySensitive', 'modelFit']),
+      ['difficulty', 'outputSize', 'agentic', 'needsHistory', 'risk', 'modelFit'],
     );
   });
 

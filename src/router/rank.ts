@@ -1,3 +1,4 @@
+import { familyFromModelId } from '../catalog/names.js';
 import type { CatalogPricing, CatalogVariant } from '../catalog/types.js';
 import type { JevRoutingConfig, ProviderConfig } from '../config/schema.js';
 import { EFFORTS, type Effort } from '../providers/types.js';
@@ -21,14 +22,9 @@ const DEFAULT_TTL_SEC: Record<string, number> = {
 };
 const DEFAULT_COST_MULTIPLIER = { metered: 1, subscription: 0.15, free: 0.02 } as const;
 
-/** Slopalytics family slug for a provider model id: strip routing prefixes and -free, dots -> dashes. */
+/** Slopalytics family slug for a provider: explicit catalogId, else derived from the model id. */
 export function catalogFamily(p: ProviderConfig): string {
-  if (p.catalogId) return p.catalogId;
-  const last = p.model.split('/').pop() ?? p.model;
-  return last
-    .toLowerCase()
-    .replace(/(:free|-free)$/, '')
-    .replace(/\./g, '-');
+  return p.catalogId ?? familyFromModelId(p.model);
 }
 
 export function inferFamilyKind(p: ProviderConfig): string {
@@ -51,6 +47,14 @@ function interp(table: number[], x: number): number {
 }
 
 const sigmoid = (x: number) => 1 / (1 + Math.exp(-x));
+
+/** P(model of intelligence I is good enough), integrated over Jev's difficulty distribution. */
+export function capability(I: number, a: Assessment, spread: number): number {
+  const req = a.requiredByLevel;
+  const total = a.difficulty.reduce((x, y) => x + y, 0);
+  if (!req || total <= 0) return sigmoid((I - a.requiredIntelligence) / spread);
+  return a.difficulty.reduce((acc, p, i) => acc + (p / total) * sigmoid((I - req[i]!) / spread), 0);
+}
 
 function resolvePricing(p: ProviderConfig, v: CatalogVariant | undefined, catalog: CatalogLookup | undefined, family: string): CatalogPricing | undefined {
   if (p.pricing) return p.pricing;
@@ -148,7 +152,7 @@ export function rankCandidates(task: TaskInput, a: Assessment, ctx: RankContext,
 
       const priorRel = usage?.completionRate !== undefined ? Math.min(1, Math.max(0.5, usage.completionRate / 0.97)) : 0.95;
       const reliability = outcomes ? outcomes.reliability(id, effort, priorRel) : priorRel;
-      const pSuccess = sigmoid((I - a.requiredIntelligence) / cfg.routing.successSpread) * reliability;
+      const pSuccess = capability(I, a, cfg.routing.successSpread) * reliability;
 
       const latencyPenalty = cfg.routing.latencyWeightUsdPerMin * (1 + 3 * a.latencySensitive) * expectedMinutes;
       let objective = (attemptCost + latencyPenalty) / Math.max(pSuccess, 1e-3);

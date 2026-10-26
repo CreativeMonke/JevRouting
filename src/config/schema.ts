@@ -132,6 +132,8 @@ export const ConfigSchema = z.object({
       riskIntelligenceBump: z.number().nonnegative().default(2),
       /** noul probability at/above which history is considered needed. */
       historyThreshold: z.number().min(0).max(1).default(0.5),
+      /** Also ask Jev for task kind + latency preference (cheap on hosted Jev; slower on local Clef). */
+      extendedQuestions: z.boolean().default(false),
       /** Ask Jev to pick among candidate models too (qualitative fit prior). */
       askModelFit: z.boolean().default(true),
       /** Weight of Jev's model-fit probability in ranking (0 disables). */

@@ -53,6 +53,8 @@ export interface Assessment {
   /** Level chosen from the distribution (quantile), after deterministic adjustments. */
   level: number;
   requiredIntelligence: number;
+  /** Required intelligence for each difficulty level (risk bump included). */
+  requiredByLevel?: number[];
   kind: TaskKind;
   kindConfidence: number;
   /** 0..3 expected output size level. */
