@@ -11,8 +11,15 @@
     "declaration": true,
     "outDir": "dist",
     "rootDir": ".",
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "resolveJsonModule": true
   },
-  "include": ["src", "test", "scripts"]
+  "include": [
+    "src",
+    "test",
+    "scripts",
+    "bench"
+  ]
 }

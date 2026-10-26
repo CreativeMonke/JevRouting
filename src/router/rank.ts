@@ -20,6 +20,14 @@ const DEFAULT_TTL_SEC: Record<string, number> = {
   google: 300,
   deepseek: 14_400,
 };
+/** Harness overhead (system prompt + tools) per agent CLI call, in tokens. claude-code measured (bench, Oct 2026); others estimated. */
+const HARNESS_TOKENS: Record<string, number> = { 'claude-code': 17_500, opencode: 9_000, antigravity: 12_000 };
+
+export function harnessTokens(p: ProviderConfig): number {
+  if (p.harnessTokens !== undefined) return p.harnessTokens;
+  return p.kind === 'cli' && p.preset ? (HARNESS_TOKENS[p.preset] ?? 0) : 0;
+}
+
 const DEFAULT_COST_MULTIPLIER = { metered: 1, subscription: 0.15, free: 0.02 } as const;
 
 /** Slopalytics family slug for a provider: explicit catalogId, else derived from the model id. */
@@ -129,7 +137,8 @@ export function rankCandidates(task: TaskInput, a: Assessment, ctx: RankContext,
 
       // Prefill: the plan's stay-vs-switch term. Warm cache -> read price; cold -> write price.
       const prefillRate = pricing ? (warm ? pricing.cacheRead : pricing.cacheWrite || pricing.input) : 0;
-      const prefill = (ctxTokens * prefillRate) / 1e6;
+      // Agent CLIs prepend their own system prompt + tool schemas on every call (measured: Claude Code ≈17.5K tokens).
+      const prefill = ((ctxTokens + harnessTokens(p)) * prefillRate) / 1e6;
 
       const verbosity = Math.min(4, Math.max(0.25, (v?.tokensPerTask ?? median) / median));
       const oneShot = pricing ? prefill + (outTokens * verbosity * pricing.output) / 1e6 : undefined;
@@ -163,6 +172,11 @@ export function rankCandidates(task: TaskInput, a: Assessment, ctx: RankContext,
       }
 
       let eligible = intelligence !== undefined && !reasons.includes('no pricing data');
+      const cooling = outcomes?.coolingDown(id);
+      if (cooling) {
+        eligible = false;
+        reasons.push(`unavailable: ${cooling}`);
+      }
       if (pSuccess < cfg.routing.minSuccess) {
         eligible = false;
         reasons.push(`P(success) ${pSuccess.toFixed(2)} < ${cfg.routing.minSuccess}`);

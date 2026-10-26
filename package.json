@@ -12,7 +12,10 @@
     "test": "vitest run",
     "test:live": "JEV_LIVE=1 vitest run test/live",
     "jev": "tsx src/cli.ts",
-    "catalog:refresh": "tsx scripts/refresh-catalog-snapshot.ts"
+    "catalog:refresh": "tsx scripts/refresh-catalog-snapshot.ts",
+    "bench": "tsx bench/run.ts --config examples/cli.config.yaml",
+    "bench:report": "tsx bench/report.ts",
+    "clef:serve": "scripts/clef-serve.sh"
   },
   "license": "UNLICENSED",
   "type": "module",

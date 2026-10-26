@@ -3,7 +3,7 @@
 //
 //   npx tsx bench/run.ts --config examples/cli.config.yaml [--baseline claude-opus@medium] [--only id,id] [--skip-baseline]
 
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -96,6 +96,8 @@ async function main() {
       only: { type: 'string' },
       'skip-baseline': { type: 'boolean' },
       'skip-routed': { type: 'boolean' },
+      /** Reuse baseline runs from an earlier result file instead of re-running them. */
+      'baseline-from': { type: 'string' },
       out: { type: 'string' },
     },
   });
@@ -106,10 +108,14 @@ async function main() {
   // Empty working dir: no project CLAUDE.md / AGENTS.md leaking into either side.
   const cwd = mkdtempSync(join(tmpdir(), 'jev-bench-'));
   const rows: BenchRow[] = [];
+  const prior = values['baseline-from']
+    ? new Map((JSON.parse(readFileSync(values['baseline-from'], 'utf8')).rows as BenchRow[]).map((r) => [r.task, r.baseline]))
+    : undefined;
 
   for (const t of tasks) {
     const row: BenchRow = { task: t.id, expected: t.expected };
-    if (!values['skip-baseline']) row.baseline = await runBaseline(app, t, bp!, be as Effort, cwd);
+    if (prior?.get(t.id)) row.baseline = prior.get(t.id);
+    else if (!values['skip-baseline']) row.baseline = await runBaseline(app, t, bp!, be as Effort, cwd);
     if (!values['skip-routed']) row.routed = await runRouted(app, t, cwd);
     rows.push(row);
     const b = row.baseline, r = row.routed;

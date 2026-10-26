@@ -123,8 +123,11 @@ export class Router {
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         attempts.push({ ...step, ok: false, error: msg });
-        // Quota / auth errors aren't the model's fault; don't penalise its reliability.
-        if (!(err instanceof ProviderError && /limit|quota|sign.?in|auth/i.test(msg))) {
+        // Quota / auth errors aren't the model's fault: don't penalise reliability, but stop
+        // offering the provider until the cooldown passes (otherwise every request wastes a call).
+        if (UNAVAILABLE.test(msg)) {
+          this.outcomes.cooldown(step.providerId, cooldownMs(msg, this.deps.config.routing.providerCooldownSec), 'quota/rate limit/sign-in');
+        } else {
           this.outcomes.record(step.providerId, step.effort, false);
         }
         if (err instanceof ProviderError && !err.retryable) continue;
@@ -196,6 +199,15 @@ export function jevFromConfig(cfg: JevRoutingConfig): SystemOneClient | undefine
     backends.push({ ...common, name: b.name, transport: b.transport, baseUrl: b.baseUrl, apiKey: b.apiKey, model: b.model, timeoutMs: b.timeoutMs ?? j.timeoutMs });
   }
   return backends.length ? new JevPool(backends) : undefined;
+}
+
+const UNAVAILABLE = /usage limit|rate.?limit|quota|too many requests|\b429\b|sign.?in|log.?in required|not authenticated|unauthori[sz]ed|\b401\b/i;
+
+/** Honour an explicit "retry after N seconds" hint when the error carries one. */
+function cooldownMs(msg: string, defaultSec: number): number {
+  const m = /retry.?after[^0-9]{0,10}(\d+)/i.exec(msg);
+  const sec = m ? Number(m[1]) : defaultSec;
+  return Math.min(Math.max(sec, 30), 6 * 3600) * 1000;
 }
 
 const round = (n: number, d = 3) => Math.round(n * 10 ** d) / 10 ** d;

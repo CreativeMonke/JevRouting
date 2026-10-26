@@ -37,6 +37,12 @@ const ProviderBase = z.object({
   /** Static priors when the catalog has no data for this model. */
   intelligence: z.number().optional(),
   costPerTask: z.number().optional(),
+  /**
+   * Fixed tokens the backend adds to every call (agent system prompt + tool schemas).
+   * Defaults: CLI presets claude-code 17500, opencode 9000, antigravity 12000; litellm 0.
+   * Set it for LiteLLM models that front an agent harness.
+   */
+  harnessTokens: z.number().int().nonnegative().optional(),
   /** Hard cap: never route here for tasks needing more than this intelligence (e.g. tiny free models). */
   maxIntelligence: z.number().optional(),
 });
@@ -159,6 +165,8 @@ export const ConfigSchema = z.object({
       cacheAware: z.boolean().default(true),
       /** Deterministic escalation: N consecutive test failures raise the difficulty level by one. */
       escalateOnConsecutiveFailures: z.number().int().positive().default(2),
+      /** How long a provider is skipped after a quota / rate-limit / sign-in failure (unless it says Retry-After). */
+      providerCooldownSec: z.number().int().positive().default(900),
       /** Fallback provider ids (ordered) used when everything else fails or Jev is down. */
       fallback: z.array(z.string()).default([]),
       /** Restrict routing to these provider ids (empty = all enabled). */

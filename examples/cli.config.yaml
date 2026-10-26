@@ -58,7 +58,7 @@ providers:
     model: claude-haiku-5-5
     catalogId: claude-haiku-5-5
     billing: subscription
-    efforts: [low, medium]
+    efforts: [low, medium, high]
     strengths: Fast and cheap; small edits, explanations, docs.
   agy-gemini-flash:
     kind: cli

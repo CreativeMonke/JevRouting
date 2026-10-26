@@ -8,15 +8,22 @@ import { dirname } from 'node:path';
  */
 export class OutcomeStore {
   private stats = new Map<string, { ok: number; fail: number }>();
+  /** providerId -> epoch ms until which it is unavailable (quota exhausted, needs sign-in, rate limited). */
+  private cooldowns = new Map<string, { until: number; reason: string }>();
 
   constructor(
     private readonly file?: string,
     private readonly priorStrength = 10,
+    private readonly now: () => number = Date.now,
   ) {
     if (file) {
       try {
-        const raw = JSON.parse(readFileSync(file, 'utf8')) as Record<string, { ok: number; fail: number }>;
-        for (const [k, v] of Object.entries(raw)) this.stats.set(k, v);
+        const raw = JSON.parse(readFileSync(file, 'utf8')) as {
+          stats?: Record<string, { ok: number; fail: number }>;
+          cooldowns?: Record<string, { until: number; reason: string }>;
+        };
+        for (const [k, v] of Object.entries(raw.stats ?? {})) this.stats.set(k, v);
+        for (const [k, v] of Object.entries(raw.cooldowns ?? {})) if (v.until > this.now()) this.cooldowns.set(k, v);
       } catch {
         // start empty
       }
@@ -48,11 +55,28 @@ export class OutcomeStore {
     return a / (a + b);
   }
 
+  /** Take a provider out of rotation (all efforts) until `until`. */
+  cooldown(providerId: string, ms: number, reason: string) {
+    this.cooldowns.set(providerId, { until: this.now() + ms, reason });
+    this.save();
+  }
+
+  /** Reason string while a provider is cooling down, else undefined. */
+  coolingDown(providerId: string): string | undefined {
+    const c = this.cooldowns.get(providerId);
+    if (!c) return undefined;
+    if (c.until <= this.now()) {
+      this.cooldowns.delete(providerId);
+      return undefined;
+    }
+    return `${c.reason} (retry in ${Math.ceil((c.until - this.now()) / 60_000)} min)`;
+  }
+
   private save() {
     if (!this.file) return;
     mkdirSync(dirname(this.file), { recursive: true });
     const tmp = `${this.file}.${process.pid}.tmp`;
-    writeFileSync(tmp, JSON.stringify(Object.fromEntries(this.stats)));
+    writeFileSync(tmp, JSON.stringify({ stats: Object.fromEntries(this.stats), cooldowns: Object.fromEntries(this.cooldowns) }));
     renameSync(tmp, this.file);
   }
 }

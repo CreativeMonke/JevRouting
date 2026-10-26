@@ -68,6 +68,7 @@ providers:
     model: ${LITELLM_CLAUDE_OPUS:-claudecode/claude-opus-5-5}
     catalogId: claude-opus-5-5
     billing: subscription
+    harnessTokens: 17500     # Claude Code system prompt + tools, cache-written per fresh session
     efforts: [medium, high, xhigh]
     strengths: Strongest reasoning; architecture, hard debugging, security-sensitive and ambiguous work.
   claude-sonnet:
@@ -75,6 +76,7 @@ providers:
     model: ${LITELLM_CLAUDE_SONNET:-claudecode/claude-sonnet-5-5}
     catalogId: claude-sonnet-5-5
     billing: subscription
+    harnessTokens: 17500     # Claude Code system prompt + tools, cache-written per fresh session
     efforts: [low, medium, high, xhigh]
     strengths: Strong all-round coder; multi-file features, refactors, tests and reviews.
   claude-haiku:
@@ -82,6 +84,7 @@ providers:
     model: ${LITELLM_CLAUDE_HAIKU:-claudecode/claude-haiku-5-5}
     catalogId: claude-haiku-5-5
     billing: subscription
+    harnessTokens: 17500     # Claude Code system prompt + tools, cache-written per fresh session
     efforts: [low, medium, high]
     strengths: Fast and cheap; small edits, explanations, docs, commit messages.
 
@@ -91,6 +94,7 @@ providers:
     model: ${LITELLM_AGY_FLASH:-antigravity/gemini-3.8-flash}
     catalogId: gemini-3-8-flash
     billing: subscription
+    harnessTokens: 12000
     efforts: [low, medium, high]
     strengths: Fast Gemini model with huge context; good for reading large codebases and UI work.
 
@@ -100,6 +104,7 @@ providers:
     model: ${LITELLM_OC_GLM:-opencode/glm-5.3-flash-free}
     catalogId: glm-5-3-flash
     billing: free
+    harnessTokens: 9000
     efforts: [max]
     effortMap: { max: high }
     maxIntelligence: 46
@@ -109,6 +114,7 @@ providers:
     model: ${LITELLM_OC_DEEPSEEK:-opencode/deepseek-v4.1-flash-free}
     catalogId: deepseek-v4-1-flash
     billing: free
+    harnessTokens: 9000
     efforts: [max]
     maxIntelligence: 44
     strengths: Free, quick; reviews, docs and simple implementation.
