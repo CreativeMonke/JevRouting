@@ -11,6 +11,7 @@
 //     [--config jev.config.yaml] [--out bench/results/conversation.json]
 
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { gunzipSync } from 'node:zlib';
 import { parseArgs } from 'node:util';
 import { buildApp, type App } from '../src/app.js';
 import { Router } from '../src/router/engine.js';
@@ -66,7 +67,7 @@ export interface TurnResult {
 const zero = (): Usage => ({ input: 0, cacheRead: 0, cacheWrite: 0, output: 0 });
 
 /** Assistant API calls with usage, deduped by message id (transcripts repeat one per content block). */
-function readCalls(transcript: string): { calls: Call[]; userTexts: Array<{ ts: number; text: string }> } {
+export function readCalls(transcript: string): { calls: Call[]; userTexts: Array<{ ts: number; text: string }> } {
   const byId = new Map<string, Call>();
   const userTexts: Array<{ ts: number; text: string }> = [];
   for (const line of readFileSync(transcript, 'utf8').split('\n')) {
@@ -96,17 +97,37 @@ function readCalls(transcript: string): { calls: Call[]; userTexts: Array<{ ts: 
   return { calls: [...byId.values()].sort((a, b) => a.ts - b.ts), userTexts };
 }
 
-/** Real user turns from the T3 export (server-sent "continue" resumes are kept; they start real work). */
-function readTurns(files: string[]): Array<{ ts: number; prefix: string }> {
-  const items = files.flatMap((f) => (JSON.parse(readFileSync(f, 'utf8')).items as ExportItem[]));
-  return items
-    .filter((i) => i.type === 'user_message' && i.createdBy === 'user')
-    .sort((a, b) => a.position - b.position)
-    .map((i) => ({ ts: Date.parse(i.updatedAt), prefix: (i.text ?? '').slice(0, 40) }));
+interface FullExport {
+  root: { items: Array<{ type: string; payload: Record<string, any> }>; providerTurns: Array<{ payload: Record<string, any> }> };
+  children: Array<{
+    thread: { title: string; payload: { modelSelection?: { model?: string } } };
+    providerTurns: Array<{ payload: { turnTokenUsage?: Record<string, number | string | boolean> } }>;
+  }>;
+}
+
+export function loadExport(path: string): FullExport {
+  const raw = readFileSync(path);
+  return JSON.parse((path.endsWith('.gz') ? gunzipSync(raw) : raw).toString('utf8'));
+}
+
+/** User turns from the full T3 export, with complete text. Server-sent "continue" resumes start real work, so they count. */
+export function turnsFromExport(exp: FullExport): Array<{ ts: number; text: string }> {
+  return exp.root.items
+    .filter((i) => i.type === 'user_message' && i.payload.createdBy === 'user')
+    .map((i) => ({ ts: Date.parse(i.payload.startedAt ?? i.payload.updatedAt), text: String(i.payload.text ?? '') }))
+    .sort((a, b) => a.ts - b.ts);
+}
+
+/** T3's own usage for a provider turn, in the same shape as transcript calls (inputTokens is the total). */
+export function t3Usage(u: Record<string, number | string | boolean> | undefined): Usage | undefined {
+  if (!u || typeof u.inputTokens !== 'number') return undefined;
+  const cached = Number(u.cachedInputTokens ?? 0);
+  const write = Number(u.cacheCreationTokens ?? 0);
+  return { input: Math.max(0, u.inputTokens - cached - write), cacheRead: cached, cacheWrite: write, output: Number(u.outputTokens ?? 0) };
 }
 
 /** USD for one call. Anthropic cache writes in this session were 1h TTL (2x input), others use their write price. */
-function priceCall(u: Usage, p: CatalogPricing, family: string, coldSwitch: boolean): number {
+export function priceCall(u: Usage, p: CatalogPricing, family: string, coldSwitch: boolean): number {
   const write = family === 'anthropic' ? p.input * 2 : p.cacheWrite || p.input;
   const cacheRead = coldSwitch ? 0 : u.cacheRead;
   const cacheWrite = u.cacheWrite + (coldSwitch ? u.cacheRead : 0);
@@ -126,7 +147,7 @@ async function main() {
     options: {
       transcript: { type: 'string' },
       config: { type: 'string', default: 'jev.config.yaml' },
-      export: { type: 'string', default: 'bench/conversation/t3-export-page1.json,bench/conversation/t3-export-page2.json' },
+      export: { type: 'string', default: 'bench/conversation/t3-thread-full.json.gz' },
       baseline: { type: 'string', default: 'claude-opus' },
       out: { type: 'string', default: 'bench/results/conversation.json' },
       /** Decisions are cached here per turn so an interrupted replay resumes. */
@@ -159,8 +180,9 @@ async function main() {
   const cache: Record<string, Awaited<ReturnType<typeof app.router.decide>>> = existsSync(values.cache!)
     ? JSON.parse(readFileSync(values.cache!, 'utf8'))
     : {};
-  const { calls, userTexts } = readCalls(values.transcript);
-  const turns = readTurns(values.export!.split(','));
+  const { calls } = readCalls(values.transcript);
+  const exp = loadExport(values.export!);
+  const turns = turnsFromExport(exp);
   const base = pricingFor(app, values.baseline!);
 
   const results: TurnResult[] = [];
@@ -172,9 +194,7 @@ async function main() {
     const end = turns[i + 1]?.ts ?? Infinity;
     const turnCalls = calls.filter((c) => c.ts >= t.ts && c.ts < end);
     if (!turnCalls.length) continue;
-    // Full text: transcript user entry whose text starts like the T3 export item (export texts are truncated).
-    const match = userTexts.find((u) => Math.abs(u.ts - t.ts) < 10_000 && u.text.startsWith(t.prefix.slice(0, 20)));
-    const prompt = redact(match?.text ?? t.prefix);
+    const prompt = redact(t.text);
     const tokens = turnCalls.reduce((acc, c) => ({
       input: acc.input + c.input, cacheRead: acc.cacheRead + c.cacheRead, cacheWrite: acc.cacheWrite + c.cacheWrite, output: acc.output + c.output,
     }), zero());
@@ -236,6 +256,24 @@ async function main() {
   }
 
   const total = (f: (r: TurnResult) => number) => results.reduce((s, r) => s + f(r), 0);
+
+  // Cross-check: T3's own per-run usage for the main thread vs the transcript calls we priced.
+  const t3Main = exp.root.providerTurns.map((p) => t3Usage(p.payload.turnTokenUsage)).filter((u): u is Usage => !!u);
+  const sumU = (us: Usage[]) => us.reduce((a, u) => ({ input: a.input + u.input, cacheRead: a.cacheRead + u.cacheRead, cacheWrite: a.cacheWrite + u.cacheWrite, output: a.output + u.output }), zero());
+  const t3Totals = sumU(t3Main);
+  const transcriptTotals = sumU(results.map((r) => r.tokens));
+
+  // Subagents (delegated through T3): priced at the model they actually ran on; identical on both sides.
+  const subagents = exp.children.map((c) => {
+    const model = c.thread.payload.modelSelection?.model ?? 'unknown';
+    const usage = sumU(c.providerTurns.map((p) => t3Usage(p.payload.turnTokenUsage)).filter((u): u is Usage => !!u));
+    const p = app.catalog?.pricing(model.replace(/^opencode\//, '').replace(/-free$/, '').replace(/\./g, '-'));
+    const free = /-free$/.test(model);
+    const usd = p && !free ? priceCall(usage, p, /claude/.test(model) ? 'anthropic' : 'other', false) : 0;
+    return { title: c.thread.title, model, usage, usd };
+  });
+  const subagentUsd = subagents.reduce((a, x) => a + x.usd, 0);
+
   const summary = {
     turns: results.length,
     calls: total((r) => r.calls),
@@ -243,16 +281,24 @@ async function main() {
     routedUsd: total((r) => r.routedUsd),
     jev: [...new Set(results.map((r) => r.decision.jevModel ?? r.decision.source))],
     avgJevLatencyMs: total((r) => r.decision.jevLatencyMs ?? 0) / Math.max(1, results.length),
+    subagents,
+    subagentUsd,
+    crossCheck: { t3: t3Totals, transcript: transcriptTotals },
   };
   mkdirSync('bench/results', { recursive: true });
   writeFileSync(values.out!, JSON.stringify({ when: new Date().toISOString(), baseline: values.baseline, config: values.config, summary, turns: results }, null, 2));
   console.error(
     `\n${summary.turns} turns, ${summary.calls} API calls: actual (${values.baseline}) $${summary.actualUsd.toFixed(2)} → routed $${summary.routedUsd.toFixed(2)} ` +
-      `(${(100 * (1 - summary.routedUsd / summary.actualUsd)).toFixed(0)}% less) · Jev ${summary.jev.join(', ')} avg ${summary.avgJevLatencyMs.toFixed(0)}ms\nwrote ${values.out}`,
+      `(${(100 * (1 - summary.routedUsd / summary.actualUsd)).toFixed(0)}% less) · Jev ${summary.jev.join(', ')} avg ${summary.avgJevLatencyMs.toFixed(0)}ms\n` +
+      `subagents (same on both sides): ${subagents.map((x) => `${x.title} [${x.model}] $${x.usd.toFixed(2)}`).join('; ')}\n` +
+      `cross-check tokens (T3 runs vs transcript turns): cacheRead ${t3Totals.cacheRead} vs ${transcriptTotals.cacheRead}, ` +
+      `cacheWrite ${t3Totals.cacheWrite} vs ${transcriptTotals.cacheWrite}, output ${t3Totals.output} vs ${transcriptTotals.output}\nwrote ${values.out}`,
   );
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}

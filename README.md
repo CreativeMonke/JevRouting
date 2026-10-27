@@ -41,12 +41,11 @@ Run 2 got *worse*. Once the fixed harness overhead was in the model, the price g
 
 ## This conversation, replayed
 
-This repo was built overnight in a single T3 Code thread, by one agent (Opus 5.5) and a few subagents. As a last test, the whole conversation was replayed through the router. [`bench/conversation.ts`](bench/conversation.ts) works like this:
+This repo was built overnight in a single T3 Code thread, by one agent (Opus 5.5) and four delegated subagents. As the final test, the whole thread was replayed through the router:
 
-1. It takes the turn list **exported from T3 Code** ([`bench/conversation/`](bench/conversation), secrets redacted).
-2. It pulls the **exact per-call token usage** for the same session from Claude Code's transcript.
-3. For every user turn, it asks the router (**Jev = local Clef**, with the conversation so far as history) which provider×effort it would have used.
-4. It re-prices **the same tokens** that turn actually consumed at that model's prices. A model switch between turns pays a cold cache write for the whole context.
+1. **Export the thread in full from T3 Code.** [`scripts/export-t3-thread.ts`](scripts/export-t3-thread.ts) reads T3's local state DB read-only. It takes every turn item with its complete payload (messages, reasoning, tool calls and results, file changes), T3's own per-run token usage, and the same for every child thread. Output: [`bench/conversation/t3-thread-full.json.gz`](bench/conversation), 4.4 MB raw. Secrets are removed twice, by pattern and by scrubbing every `.env` secret value *and any 6+ char fragment of it*.
+2. **Replay it.** [`bench/conversation.ts`](bench/conversation.ts) takes each user turn (full text) from the export, plus exact per-call usage from the session transcript. It asks the router (**Jev = local Clef**, with the conversation so far as history) which provider×effort it would use. Then it re-prices **the same tokens** at that model's prices. A model switch pays a cold cache write for the whole context, and a replay clock decides which caches are still warm.
+3. **Cross-check.** T3's own usage totals are compared against the transcript, and the subagent threads are priced at the models they actually ran on.
 
 ![This conversation replayed: actual Opus 5.5 vs JevRouting](docs/conversation-replay.svg)
 
@@ -68,12 +67,13 @@ This repo was built overnight in a single T3 Code thread, by one agent (Opus 5.5
 | 13 | also, the gemini plan seems incomplete locally, here it is i… | 19 | Clef L4 | claude-sonnet@xhigh ↺ | $1.01 | $1.33 |
 | 14 | and the full verbose plan here: https://share.gemini.google/… | 11 | Clef L4 | claude-sonnet@high | $0.65 | $0.32 |
 | 15 | what do you want credentials too?… | 8 | Clef L4 | claude-sonnet@high | $0.71 | $0.35 |
-| 16 | [REDACTED] - work… | 7 | Clef L4 | claude-sonnet@high | $0.53 | $0.26 |
+| 16 | [REDACTED] - workers ai api token - no credit on it… | 7 | Clef L4 | claude-sonnet@high | $0.53 | $0.26 |
 | 17 | You may get this locally: mlx-community/clef-flash-4bit… | 22 | Clef L3 | opencode-deepseek-flash@max ↺ | $1.82 | $0.14 |
 | 18 | ok. mention in the readme the setup and altency vs jev hoste… | 62 | Clef L2 | opencode-deepseek-flash@max | $5.53 | $0.20 |
 | 19 | and don't forget at the end to actually run it ( at least in… | 1 | Clef L3 | opencode-glm-flash@max ↺ | $0.00 | $0.00 |
-| 20 | Continue where you left off.… | 61 | Clef L3 | claude-sonnet@high ↺ | $9.51 | $4.80 |
-| | **Total** | **278** | | | **$25.35** | **$12.61** (−50%) |
+| 20 | Continue where you left off.… | 84 | Clef L3 | claude-sonnet@high ↺ | $12.06 | $6.08 |
+| 21 | /goal finish implementation + testing ( against this t3 thre… | 20 | Clef L3 | claude-sonnet@high | $2.50 | $1.25 |
+| | **Total** | **321** | | | **$30.40** | **$15.14** (−50%) |
 <!-- CONVERSATION-TABLE:END -->
 
 **What it shows.**
@@ -83,7 +83,18 @@ This repo was built overnight in a single T3 Code thread, by one agent (Opus 5.5
 - The losses are **cold switches**. Turns 7, 9 and 10 each moved to a different model, and each switch paid a full cache write on 60–120K tokens. Those switches cost more than staying on the warm model would have, even at the higher price.
 - So a stickier switching policy is the obvious next tuning. For example, require the predicted saving to exceed the switch penalty by a margin, or judge it over the expected remaining turns rather than the current one.
 
-Read this as an **upper bound**. It assumes the routed model would have done each turn's work in the same number of tokens, and succeeded. That's optimistic for the long agentic turns the router sent to free OpenCode models. The switching penalty and Jev's own cost, which is zero locally, are included. Reproduce with `npx tsx bench/conversation.ts --transcript <session.jsonl>`, then `npx tsx bench/conversation-report.ts --readme README.md`.
+Read this as an **upper bound**. It assumes the routed model would have done each turn's work in the same number of tokens, and succeeded. That's optimistic for the long agentic turns the router sent to free OpenCode models. The switching penalty and Jev's own cost, which is zero locally, are included.
+
+- **Subagents:** the four subagent threads (three Haiku 5.5, one free DeepSeek) are priced from T3's usage and are identical on both sides: about $0.36 in total.
+- **Cross-check:** T3's run totals match the transcript to within about 10%. The difference is the run that was still in progress at export time, which T3 hadn't finalized.
+
+To reproduce:
+
+```bash
+npx tsx scripts/export-t3-thread.ts <threadId>          # → bench/conversation/t3-thread-full.json.gz
+npx tsx bench/conversation.ts --transcript ~/.claude/projects/<project>/<session>.jsonl
+npx tsx bench/conversation-report.ts --readme README.md
+```
 
 ## How a request is routed
 
