@@ -51,7 +51,37 @@ This repo was built overnight in a single T3 Code thread, by one agent (Opus 5.5
 ![This conversation replayed: actual Opus 5.5 vs JevRouting](docs/conversation-replay.svg)
 
 <!-- CONVERSATION-TABLE:START -->
+| # | User turn | API calls | Jev | Routed to | Actual (claude-opus) | Routed |
+|---:|---|---:|---|---|---:|---:|
+| 1 | Plan from argon on high is in the root. ( don't trust it, sh… | 6 | Clef L4 | claude-sonnet@high ↺ | $0.51 | $0.30 |
+| 2 | 1. opencode console: jev-1.13-free; temp key for you: [REDAC… | 2 | Clef L3 | claude-sonnet@high | $0.08 | $0.04 |
+| 3 | use worktrees, but you may do pr's and aproove them to main… | 5 | Clef L3 | opencode-glm-flash@max ↺ | $0.19 | $0.02 |
+| 4 | litellm - what i use to route to claudecode, antigravity, op… | 7 | Clef L3 | claude-sonnet@high ↺ | $0.25 | $0.43 |
+| 5 | you may use any dependencies you want, anything actually… | 2 | Clef L3 | claude-sonnet@high | $0.15 | $0.07 |
+| 6 | i also want local ( cached ) + updates once a day from slopp… | 18 | Clef L3 | opencode-deepseek-flash@max ↺ | $0.76 | $0.06 |
+| 7 | And figure out what and how to feed jev, since i don't fully… | 2 | Clef L4 | claude-opus@medium ↺ | $0.13 | $1.02 |
+| 8 | you may also feed it models to pick from. you have the freed… | 3 | Clef L4 | claude-opus@medium | $0.25 | $0.25 |
+| 9 | And the readme should contain a good visualisation of cost (… | 2 | Clef L4 | claude-sonnet@high ↺ | $0.13 | $0.56 |
+| 10 | what would you change about the arhirtecture, flows, etc? to… | 5 | Clef L5 | claude-opus@medium ↺ | $0.44 | $1.47 |
+| 11 | [Assistant quote](t3-citation://v1/9a1a57b7-f241-44a3-bca3-d… | 10 | Clef L4 | claude-opus@medium | $0.79 | $0.79 |
+| 12 | if data is not available on slopalitics, configurable on/off… | 25 | Clef L3 | opencode-glm-flash@max ↺ | $1.93 | $0.19 |
+| 13 | also, the gemini plan seems incomplete locally, here it is i… | 19 | Clef L4 | claude-sonnet@xhigh ↺ | $1.01 | $1.33 |
+| 14 | and the full verbose plan here: https://share.gemini.google/… | 11 | Clef L4 | claude-sonnet@high | $0.65 | $0.32 |
+| 15 | what do you want credentials too?… | 8 | Clef L4 | claude-sonnet@high | $0.71 | $0.35 |
+| 16 | [REDACTED] - work… | 7 | Clef L4 | claude-sonnet@high | $0.53 | $0.26 |
+| 17 | You may get this locally: mlx-community/clef-flash-4bit… | 22 | Clef L3 | opencode-deepseek-flash@max ↺ | $1.82 | $0.14 |
+| 18 | ok. mention in the readme the setup and altency vs jev hoste… | 62 | Clef L2 | opencode-deepseek-flash@max | $5.53 | $0.20 |
+| 19 | and don't forget at the end to actually run it ( at least in… | 1 | Clef L3 | opencode-glm-flash@max ↺ | $0.00 | $0.00 |
+| 20 | Continue where you left off.… | 61 | Clef L3 | claude-sonnet@high ↺ | $9.51 | $4.80 |
+| | **Total** | **278** | | | **$25.35** | **$12.61** (−50%) |
 <!-- CONVERSATION-TABLE:END -->
+
+**What it shows.**
+
+- Every decision came from **local Clef**, averaging 6.2 s per call with up to 3 turns of history.
+- The savings come from routine turns: config tweaks, README edits, the long "continue" turns. Those went to Sonnet or to free models instead of Opus.
+- The losses are **cold switches**. Turns 7, 9 and 10 each moved to a different model, and each switch paid a full cache write on 60–120K tokens. Those switches cost more than staying on the warm model would have, even at the higher price.
+- So a stickier switching policy is the obvious next tuning. For example, require the predicted saving to exceed the switch penalty by a margin, or judge it over the expected remaining turns rather than the current one.
 
 Read this as an **upper bound**. It assumes the routed model would have done each turn's work in the same number of tokens, and succeeded. That's optimistic for the long agentic turns the router sent to free OpenCode models. The switching penalty and Jev's own cost, which is zero locally, are included. Reproduce with `npx tsx bench/conversation.ts --transcript <session.jsonl>`, then `npx tsx bench/conversation-report.ts --readme README.md`.
 

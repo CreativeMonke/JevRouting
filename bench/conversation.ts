@@ -132,6 +132,7 @@ async function main() {
       /** Decisions are cached here per turn so an interrupted replay resumes. */
       cache: { type: 'string', default: 'bench/results/conversation.decisions.json' },
       'jev-timeout-ms': { type: 'string', default: '600000' },
+      'as-metered': { type: 'boolean', default: true },
     },
   });
   if (!values.transcript) throw new Error('--transcript <session.jsonl> required');
@@ -145,6 +146,9 @@ async function main() {
     mutateConfig: (cfg) => {
       cfg.jev.timeoutMs = jevTimeout;
       for (const b of cfg.jev.backends) b.timeoutMs = jevTimeout;
+      // The replay compares API list prices, so the router must optimise list prices too:
+      // subscription seats are treated as metered (free models stay free).
+      if (values['as-metered']) for (const p of Object.values(cfg.providers)) if (p.billing === 'subscription') p.billing = 'metered';
     },
   });
   // Replay clock: session cache warmth is judged at the turn's real timestamp, so a model used
