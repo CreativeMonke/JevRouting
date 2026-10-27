@@ -86,7 +86,7 @@ This repo was built overnight in a single T3 Code thread, by one agent (Opus 5.5
 Read this as an **upper bound**. It assumes the routed model would have done each turn's work in the same number of tokens, and succeeded. That's optimistic for the long agentic turns the router sent to free OpenCode models. The switching penalty and Jev's own cost, which is zero locally, are included.
 
 - **Subagents:** the four subagent threads (three Haiku 5.5, one free DeepSeek) are priced from T3's usage and are identical on both sides: about $0.36 in total.
-- **Cross-check:** T3's run totals match the transcript to within about 10%. The difference is the run that was still in progress at export time, which T3 hadn't finalized.
+- **Cross-check, per T3 run:** output tokens match T3's own usage to within 0.1%. Cache reads differ by −3.7% to +6% per run, because calls near run boundaries get attributed to the neighbouring run. Across all completed runs the transcript has 83,718,524 cache reads against T3's 83,911,278 (−0.2%). The headline gap is the run still in progress at export time: 17.2M cache reads that T3 hadn't recorded yet.
 
 To reproduce:
 
@@ -192,6 +192,12 @@ providers:
     maxIntelligence: 46                 # never send it tasks needing more
 ```
 
+Live-tested CLIs:
+
+- **Claude Code:** success path, with cost and usage parsed.
+- **OpenCode:** success path on `openrouter/openrouter/free` and `deepseek-v4.1-flash-free`.
+- **Antigravity (`agy`):** tested up to Google's account-verification gate. The adapter launches `agy -p … --model …`, the router classifies the failure as a sign-in error, cools the provider down, and the next plan skips it. A real answer needs a one-time `agy` sign-in in a browser.
+
 Optional per provider: `pricing` (USD per 1M tokens, overrides the catalog), `cacheTtlSec`, `effortMap` (e.g. DeepSeek only accepts low/high/max), `intelligence` / `costPerTask` priors for models no catalog knows, `timeoutMs` and `enabled`. To swap a backend, change `model` (and `catalogId`), or add a block. `routing.only` and `routing.fallback` restrict or extend the pool.
 
 ## Model data: Slopalytics first, cached daily
@@ -211,7 +217,7 @@ Any System One-compatible endpoint works. They're tried in order; one is skipped
 | Backend | Model | Setup | Latency (this router's request) |
 |---|---|---|---|
 | **Local Clef (MLX)** | `clef-flash-4bit` | `scripts/clef-serve.sh`, then `JEV_LOCAL_URL=http://127.0.0.1:8765/v1` | **~4.6 s** on an M4/16 GB for the 6-question request (~1.1K tokens); ~0.9 s for a single short question |
-| **OpenCode Zen** | `jev-1.13-free` | `JEV_API_KEY` (OpenCode key) | hosted TypeSafe Jev, same model (~0.1–0.2 s expected). Not measured here: the shared free quota on the test key stayed exhausted (`429 FreeUsageLimitError`), and the 429 itself comes back in ~0.45 s |
+| **OpenCode Zen** | `jev-1.13-free` | `JEV_API_KEY` (OpenCode key) | hosted TypeSafe Jev, same model (~0.1–0.2 s expected). Not measured: the test key's free quota stayed exhausted (`429 FreeUsageLimitError`, `Retry-After` ≈ 18 h) and paid `jev-1.13` returned `402` (no credit). The 429 itself comes back in ~0.45 s |
 | **Cloudflare Workers AI** | `clef-flash` | `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_AUTH_TOKEN` (10K free neurons/day) | provider-reported ~0.2 s |
 | **TypeSafe direct** | `jev-1.13.0` | `TYPESAFE_API_KEY` | ~127 ms p50 / 231 ms p95 (LiteLLM benchmark) |
 
