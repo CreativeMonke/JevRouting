@@ -39,6 +39,7 @@ function textOf(content: unknown): string {
 
 /** Map an OpenAI-style chat body to a router task. The last user message is the prompt. */
 export function taskFromChat(body: ChatBody, headers: IncomingMessage['headers'], providerIds: string[]): TaskInput {
+  if (!body || typeof body !== 'object') throw new HttpError(400, 'request body must be a JSON object');
   const msgs = (body.messages ?? []).map((m) => ({ role: m.role, content: textOf(m.content) }));
   let lastUser = -1;
   for (let i = msgs.length - 1; i >= 0; i--) if (msgs[i]!.role === 'user') { lastUser = i; break; }

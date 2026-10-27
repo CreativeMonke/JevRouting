@@ -72,11 +72,16 @@ export class OutcomeStore {
     return `${c.reason} (retry in ${Math.ceil((c.until - this.now()) / 60_000)} min)`;
   }
 
+  /** Best effort: a state-file write error must never fail a routed request. */
   private save() {
     if (!this.file) return;
-    mkdirSync(dirname(this.file), { recursive: true });
-    const tmp = `${this.file}.${process.pid}.tmp`;
-    writeFileSync(tmp, JSON.stringify({ stats: Object.fromEntries(this.stats), cooldowns: Object.fromEntries(this.cooldowns) }));
-    renameSync(tmp, this.file);
+    try {
+      mkdirSync(dirname(this.file), { recursive: true });
+      const tmp = `${this.file}.${process.pid}.tmp`;
+      writeFileSync(tmp, JSON.stringify({ stats: Object.fromEntries(this.stats), cooldowns: Object.fromEntries(this.cooldowns) }));
+      renameSync(tmp, this.file);
+    } catch {
+      // Losing one outcome update is harmless; failing the completion is not.
+    }
   }
 }

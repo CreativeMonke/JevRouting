@@ -132,6 +132,7 @@ export class JevClient {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), this.opts.timeoutMs);
     let res: Response;
+    let text: string;
     try {
       const url =
         this.opts.transport === 'workers-ai'
@@ -147,6 +148,8 @@ export class JevClient {
         body: JSON.stringify(body),
         signal: ctrl.signal,
       });
+      // The timeout must cover the body too: a backend that sends headers then stalls would hang routing.
+      text = await res.text();
     } catch (err) {
       const msg = ctrl.signal.aborted ? `Jev request timed out after ${this.opts.timeoutMs}ms` : String(err);
       throw new JevError(msg);
@@ -154,7 +157,6 @@ export class JevClient {
       clearTimeout(timer);
     }
 
-    const text = await res.text();
     let json: unknown;
     try {
       json = text ? JSON.parse(text) : undefined;
