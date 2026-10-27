@@ -62,13 +62,24 @@ providers:
     efforts: [low, medium, high]
     strengths: Fast and cheap; small edits, explanations, docs.
   agy-gemini-flash:
+    # Antigravity over ACP via the agy server bundled with T3 Code (reuses T3's Google session).
+    kind: acp
+    preset: antigravity
+    model: gemini-3.8-flash-{effort}
+    catalogId: gemini-3-8-flash
+    billing: subscription
+    harnessTokens: 12000
+    efforts: [low, medium, high]
+    strengths: Fast Gemini with huge context; reading large codebases, UI work.
+  agy-cli-gemini-flash:
+    # Same models through the bare `agy` CLI: needs a one-time browser sign-in, so off by default.
     kind: cli
     preset: antigravity
     model: gemini-3.8-flash-medium
     catalogId: gemini-3-8-flash
     billing: subscription
     efforts: [medium]
-    strengths: Fast Gemini with huge context; reading large codebases, UI work.
+    enabled: false
   opencode-glm-flash:
     kind: cli
     preset: opencode

@@ -7,3 +7,4 @@ export * from './cli-output.js';
 export * from './cli.js';
 export * from './mock.js';
 export * from './registry.js';
+export * from './acp.js';

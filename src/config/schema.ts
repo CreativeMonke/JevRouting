@@ -71,6 +71,21 @@ export const CliProviderSchema = ProviderBase.extend({
   output: z.enum(['text', 'claude-json', 'opencode-json']).optional(),
 });
 
+export const AcpProviderSchema = ProviderBase.extend({
+  kind: z.literal('acp'),
+  /** antigravity: the agy ACP server bundled with T3 Code (reuses T3's Google session). */
+  preset: z.enum(['antigravity']).optional(),
+  /** Model id; may contain {effort}, e.g. gemini-3.8-flash-{effort}. */
+  model: z.string(),
+  command: z.string().optional(),
+  args: z.array(z.string()).optional(),
+  env: z.record(z.string(), z.string()).optional(),
+  /** ACP authenticate methodId (antigravity preset default: oauth-personal). */
+  authMethod: z.string().optional(),
+  /** Session config option that selects the model (default "model"). */
+  modelConfigId: z.string().optional(),
+});
+
 export const MockProviderSchema = ProviderBase.extend({
   kind: z.literal('mock'),
   model: z.string().default('mock'),
@@ -82,12 +97,14 @@ export const MockProviderSchema = ProviderBase.extend({
 export const ProviderConfigSchema = z.discriminatedUnion('kind', [
   LiteLLMProviderSchema,
   CliProviderSchema,
+  AcpProviderSchema,
   MockProviderSchema,
 ]);
 export type ProviderConfig = z.infer<typeof ProviderConfigSchema>;
 export type LiteLLMProviderConfig = z.infer<typeof LiteLLMProviderSchema>;
 export type CliProviderConfig = z.infer<typeof CliProviderSchema>;
 export type MockProviderConfig = z.infer<typeof MockProviderSchema>;
+export type AcpProviderConfig = z.infer<typeof AcpProviderSchema>;
 
 export const ConfigSchema = z.object({
   jev: z.object({

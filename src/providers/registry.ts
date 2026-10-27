@@ -1,4 +1,5 @@
 import type { ProviderConfig } from '../config/schema.js';
+import { AcpProvider } from './acp.js';
 import { CliProvider } from './cli.js';
 import { LiteLLMProvider } from './litellm.js';
 import { MockProvider } from './mock.js';
@@ -10,6 +11,8 @@ export function createProvider(id: string, cfg: ProviderConfig, env?: NodeJS.Pro
       return new LiteLLMProvider(id, cfg, { env });
     case 'cli':
       return new CliProvider(id, cfg, { env });
+    case 'acp':
+      return new AcpProvider(id, cfg, { env });
     case 'mock':
       return new MockProvider(id, cfg);
   }
