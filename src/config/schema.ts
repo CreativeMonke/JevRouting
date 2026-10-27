@@ -116,6 +116,7 @@ export const ConfigSchema = z.object({
           /** Skip unless this is set (e.g. a Cloudflare account id). */
           requires: z.array(z.string().optional()).optional(),
           timeoutMs: z.number().int().positive().optional(),
+          maxRetries: z.number().int().nonnegative().optional(),
         }),
       )
       .default([]),

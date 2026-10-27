@@ -14,6 +14,8 @@ const SECRET_PATTERNS: RegExp[] = [
   /\b(?:sk|oc_sk|pk|rk)[-_][A-Za-z0-9_-]{16,}\b/g,
   /\bgh[pousr]_[A-Za-z0-9]{20,}\b/g,
   /\bAKIA[0-9A-Z]{16}\b/g,
+  /\bcf[a-z]{1,4}_[A-Za-z0-9_-]{20,}/g, // Cloudflare API tokens (cfut_, cfat_, ...)
+  /\b(?:hf|xox[abp]|glpat|AIza)[-_A-Za-z0-9]{20,}/g,
   /\b(?:eyJ[A-Za-z0-9_-]{10,}\.){2}[A-Za-z0-9_-]{10,}\b/g,
   /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g,
 ];

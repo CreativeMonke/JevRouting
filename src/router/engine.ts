@@ -66,9 +66,10 @@ export class Router {
     }
   }
 
-  async decide(task: TaskInput): Promise<RoutingDecision> {
+  /** Assess (unless an assessment is supplied, e.g. a cached Jev answer in a replay) and rank. */
+  async decide(task: TaskInput, opts: { assessment?: Assessment } = {}): Promise<RoutingDecision> {
     const cfg = this.deps.config;
-    const assessment = await this.assess(task);
+    const assessment = opts.assessment ?? (await this.assess(task));
     const pruneContext =
       (task.history?.length ?? 0) > 0 && assessment.needsHistory < cfg.classifier.historyThreshold;
     const candidates = rankCandidates(task, assessment, this.ctx(), pruneContext);
@@ -196,7 +197,16 @@ export function jevFromConfig(cfg: JevRoutingConfig): SystemOneClient | undefine
   if (j.baseUrl && j.model) backends.push({ ...common, name: 'primary', baseUrl: j.baseUrl, apiKey: j.apiKey, model: j.model });
   for (const b of j.backends) {
     if (!b.baseUrl || (b.requires && b.requires.some((r) => !r))) continue;
-    backends.push({ ...common, name: b.name, transport: b.transport, baseUrl: b.baseUrl, apiKey: b.apiKey, model: b.model, timeoutMs: b.timeoutMs ?? j.timeoutMs });
+    backends.push({
+      ...common,
+      name: b.name,
+      transport: b.transport,
+      baseUrl: b.baseUrl,
+      apiKey: b.apiKey,
+      model: b.model,
+      timeoutMs: b.timeoutMs ?? j.timeoutMs,
+      maxRetries: b.maxRetries ?? j.maxRetries,
+    });
   }
   return backends.length ? new JevPool(backends) : undefined;
 }
