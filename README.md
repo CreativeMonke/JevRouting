@@ -39,6 +39,22 @@ Run 2 got *worse*. Once the fixed harness overhead was in the model, the price g
 - Free OpenCode models were in cooldown (quota exhausted) during these runs. With quota available, the router sends some of this work to them at $0 marginal cost.
 - Reproduce with `npm run bench -- --baseline-from bench/results/run1.json` (reuses the Opus baseline) and `npm run bench:report -- <result.json> --readme README.md`.
 
+## This conversation, replayed
+
+This repo was built overnight in a single T3 Code thread, by one agent (Opus 5.5) and a few subagents. As a last test, the whole conversation was replayed through the router. [`bench/conversation.ts`](bench/conversation.ts) works like this:
+
+1. It takes the turn list **exported from T3 Code** ([`bench/conversation/`](bench/conversation), secrets redacted).
+2. It pulls the **exact per-call token usage** for the same session from Claude Code's transcript.
+3. For every user turn, it asks the router (**Jev = local Clef**, with the conversation so far as history) which provider×effort it would have used.
+4. It re-prices **the same tokens** that turn actually consumed at that model's prices. A model switch between turns pays a cold cache write for the whole context.
+
+![This conversation replayed: actual Opus 5.5 vs JevRouting](docs/conversation-replay.svg)
+
+<!-- CONVERSATION-TABLE:START -->
+<!-- CONVERSATION-TABLE:END -->
+
+Read this as an **upper bound**. It assumes the routed model would have done each turn's work in the same number of tokens, and succeeded. That's optimistic for the long agentic turns the router sent to free OpenCode models. The switching penalty and Jev's own cost, which is zero locally, are included. Reproduce with `npx tsx bench/conversation.ts --transcript <session.jsonl>`, then `npx tsx bench/conversation-report.ts --readme README.md`.
+
 ## How a request is routed
 
 ```mermaid
@@ -154,7 +170,7 @@ Any System One-compatible endpoint works. They're tried in order; one is skipped
 | Backend | Model | Setup | Latency (this router's request) |
 |---|---|---|---|
 | **Local Clef (MLX)** | `clef-flash-4bit` | `scripts/clef-serve.sh`, then `JEV_LOCAL_URL=http://127.0.0.1:8765/v1` | **~4.6 s** on an M4/16 GB for the 6-question request (~1.1K tokens); ~0.9 s for a single short question |
-| **OpenCode Zen** | `jev-1.13-free` | `JEV_API_KEY` (OpenCode key) | JEV_ZEN_LATENCY |
+| **OpenCode Zen** | `jev-1.13-free` | `JEV_API_KEY` (OpenCode key) | hosted TypeSafe Jev, same model (~0.1–0.2 s expected). Not measured here: the shared free quota on the test key stayed exhausted (`429 FreeUsageLimitError`), and the 429 itself comes back in ~0.45 s |
 | **Cloudflare Workers AI** | `clef-flash` | `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_AUTH_TOKEN` (10K free neurons/day) | provider-reported ~0.2 s |
 | **TypeSafe direct** | `jev-1.13.0` | `TYPESAFE_API_KEY` | ~127 ms p50 / 231 ms p95 (LiteLLM benchmark) |
 

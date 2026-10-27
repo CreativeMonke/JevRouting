@@ -228,6 +228,8 @@ export function buildPlan(ranked: Candidate[], fallback: string[], maxAttempts =
   for (const id of fallback) {
     if (used.has(id)) continue;
     const c = ranked.find((r) => r.providerId === id);
+    // A provider in quota/sign-in cooldown would just fail again; skip it unless the plan is empty.
+    if (plan.length && c?.reasons.some((r) => r.startsWith('unavailable:'))) continue;
     plan.push({ providerId: id, effort: c?.effort ?? 'medium' });
     used.add(id);
   }

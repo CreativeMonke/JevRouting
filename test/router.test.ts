@@ -13,6 +13,7 @@ import {
   Router,
   SessionStore,
   OutcomeStore,
+  buildPlan,
   buildQuestions,
   capability,
   floorAt,
@@ -190,6 +191,18 @@ describe('question sets and distribution math', () => {
     // ~half the mass is easy for a 45 model, half is far out of reach
     expect(p).toBeGreaterThan(0.45);
     expect(p).toBeLessThan(0.55);
+  });
+});
+
+describe('buildPlan', () => {
+  const c = (providerId: string, eligible: boolean, reasons: string[] = []) => ({
+    providerId, effort: 'medium' as const, family: 'x', intelligence: 40, pSuccess: 0.8, attemptCost: 0, listCost: 0,
+    objective: 1, expectedMinutes: 1, cacheWarm: false, eligible, reasons,
+  });
+  it('skips fallbacks that are in cooldown unless nothing else is planned', () => {
+    const ranked = [c('a', true), c('fb', false, ['unavailable: quota (retry in 9 min)'])];
+    expect(buildPlan(ranked, ['fb']).map((p) => p.providerId)).toEqual(['a']);
+    expect(buildPlan([c('fb', false, ['unavailable: quota'])], ['fb']).map((p) => p.providerId)).toEqual(['fb']);
   });
 });
 

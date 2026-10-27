@@ -28,10 +28,13 @@ export interface BuildOptions {
   catalogRefresh?: 'auto' | 'force' | 'never';
   /** Keep sessions/outcomes in memory only (tests, benchmarks). */
   ephemeral?: boolean;
+  /** Adjust the parsed config before anything is built (benchmarks, tests). */
+  mutateConfig?: (cfg: JevRoutingConfig) => void;
 }
 
 export async function buildApp(opts: BuildOptions = {}): Promise<App> {
   const { config, path } = loadConfig(opts.configPath);
+  opts.mutateConfig?.(config);
   const providers = createProviders(config.providers);
   const dir = stateDir(config);
 

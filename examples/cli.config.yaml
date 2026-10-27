@@ -10,7 +10,8 @@ jev:
     - name: local-clef              # Cloudflare Clef-flash on this Mac via MLX (scripts/clef-serve.sh)
       baseUrl: ${JEV_LOCAL_URL}
       model: clef-flash
-      timeoutMs: 8000
+      timeoutMs: 30000              # requests run one at a time on the GPU; ~4 ms per input token on an M4
+      maxRetries: 0                 # a retry after a timeout just queues duplicate work behind the first
       requires: ["${JEV_LOCAL_URL}"]
     - name: opencode-zen            # TypeSafe Jev hosted free by OpenCode Zen
       baseUrl: https://opencode.ai/zen/v1
