@@ -1,5 +1,5 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import type { ChatMessage, Effort } from './providers/types.js';
 import { EFFORTS } from './providers/types.js';
 import type { Router, RunResult } from './router/engine.js';
@@ -121,14 +121,21 @@ function decisionSummary(r: RunResult) {
   };
 }
 
+/** Constant-time bearer check (hash both sides so lengths match). */
+export function bearerMatches(header: string | undefined, key: string): boolean {
+  const digest = (v: string) => createHash('sha256').update(v).digest();
+  return timingSafeEqual(digest(header ?? ''), digest(`Bearer ${key}`));
+}
+
 export function createJevServer(opts: ServerOptions): Server {
+  if (opts.apiKey === '') throw new Error('server apiKey is an empty string; unset it to disable auth or set a real key');
   const { router, providerIds } = opts;
 
   const handle = async (req: IncomingMessage, res: ServerResponse) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
     if (req.method === 'GET' && url.pathname === '/healthz') return send(res, 200, { ok: true });
 
-    if (opts.apiKey && req.headers.authorization !== `Bearer ${opts.apiKey}`) {
+    if (opts.apiKey !== undefined && !bearerMatches(req.headers.authorization, opts.apiKey)) {
       throw new HttpError(401, 'invalid API key');
     }
 
