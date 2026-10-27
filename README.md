@@ -178,7 +178,7 @@ Everything lives in [`jev.config.yaml`](jev.config.yaml) (LiteLLM-backed) or [`e
 ```yaml
 providers:
   claude-sonnet:
-    kind: litellm                       # litellm | cli | mock
+    kind: litellm                       # litellm | cli | acp | mock
     model: claudecode/claude-sonnet-5-5 # your LiteLLM model_name
     catalogId: claude-sonnet-5-5        # Slopalytics family (inferred from model when omitted)
     billing: subscription               # metered | subscription | free
@@ -196,7 +196,7 @@ Live-tested CLIs:
 
 - **Claude Code:** success path, with cost and usage parsed.
 - **OpenCode:** success path on `openrouter/openrouter/free` and `deepseek-v4.1-flash-free`.
-- **Antigravity (`agy`):** tested up to Google's account-verification gate. The adapter launches `agy -p … --model …`, the router classifies the failure as a sign-in error, cools the provider down, and the next plan skips it. A real answer needs a one-time `agy` sign-in in a browser.
+- **Antigravity:** success path via **ACP** (`kind: acp`, `preset: antigravity`). This uses the agy ACP server bundled with T3 Code and reuses T3's Google session; `model: gemini-3.8-flash-{effort}` picks the effort variant. The bare `agy` CLI preset is also supported (`agy-cli-gemini-flash`), but it needs a one-time browser sign-in. Until then, the router detects the sign-in failure and puts the provider on cooldown.
 
 Optional per provider: `pricing` (USD per 1M tokens, overrides the catalog), `cacheTtlSec`, `effortMap` (e.g. DeepSeek only accepts low/high/max), `intelligence` / `costPerTask` priors for models no catalog knows, `timeoutMs` and `enabled`. To swap a backend, change `model` (and `catalogId`), or add a block. `routing.only` and `routing.fallback` restrict or extend the pool.
 
