@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { parseConfig } from '../src/config/load.js';
 import type { CompletionRequest, Provider } from '../src/providers/types.js';
 import { Router } from '../src/router/engine.js';
-import { createJevServer, taskFromChat } from '../src/server.js';
+import { bearerMatches, createJevServer, taskFromChat } from '../src/server.js';
 import { fakeCatalog } from './helpers/fake-catalog.js';
 
 class EchoProvider implements Provider {
@@ -24,6 +24,18 @@ const cfg = parseConfig({
     haiku: { kind: 'mock', model: 'claude-haiku-5-5', efforts: ['low', 'medium'] },
     opus: { kind: 'mock', model: 'claude-opus-5-5', efforts: ['medium', 'high'] },
   },
+});
+
+describe('auth', () => {
+  it('bearerMatches is exact', () => {
+    expect(bearerMatches('Bearer k1', 'k1')).toBe(true);
+    expect(bearerMatches('Bearer k1x', 'k1')).toBe(false);
+    expect(bearerMatches(undefined, 'k1')).toBe(false);
+  });
+  it('refuses an empty api key instead of running unauthenticated', () => {
+    const router = new Router({ config: cfg, providers: new Map(), log: () => {} });
+    expect(() => createJevServer({ router, providerIds: [], apiKey: '' })).toThrow(/empty/);
+  });
 });
 
 describe('taskFromChat', () => {

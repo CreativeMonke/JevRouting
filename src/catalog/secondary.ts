@@ -120,7 +120,12 @@ export async function loadSecondary(opts: {
   const now = opts.now ?? Date.now;
   const fetchFn = opts.fetch ?? fetch;
   const warnings: string[] = [];
-  await mkdir(opts.cacheDir, { recursive: true });
+  try {
+    await mkdir(opts.cacheDir, { recursive: true });
+  } catch (err) {
+    // Unwritable cache dir: still fetch, just don't persist (and say so).
+    warnings.push(`secondary cache dir unusable: ${err instanceof Error ? err.message : String(err)}`);
+  }
 
   const one = async (name: string, enabled: boolean, load: () => Promise<Record<string, SecondaryModel>>) => {
     if (!enabled) return {};
@@ -131,7 +136,9 @@ export async function loadSecondary(opts: {
     if (opts.refresh !== 'never') {
       try {
         const models = await load();
-        await writeAtomic(file, { fetchedAt: new Date(now()).toISOString(), models } satisfies SecondaryData);
+        await writeAtomic(file, { fetchedAt: new Date(now()).toISOString(), models } satisfies SecondaryData).catch((err: unknown) =>
+          warnings.push(`${name} cache write failed: ${err instanceof Error ? err.message : String(err)}`),
+        );
         return models;
       } catch (err) {
         warnings.push(`${name} refresh failed: ${err instanceof Error ? err.message : String(err)}`);

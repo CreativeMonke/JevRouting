@@ -128,6 +128,7 @@ async function main(argv = process.argv.slice(2)) {
       const server = createJevServer({
         router: app.router,
         providerIds: [...app.providers.keys()],
+        // Empty JEV_SERVER_KEY is rejected by createJevServer rather than silently disabling auth.
         apiKey: process.env.JEV_SERVER_KEY,
       });
       server.listen(port, host, () => {
