@@ -1,16 +1,77 @@
 {
-  "when": "2026-10-27T05:26:05.484Z",
+  "when": "2026-10-27T05:33:38.602Z",
   "baseline": "claude-opus",
   "config": "jev.config.yaml",
   "summary": {
-    "turns": 20,
-    "calls": 278,
-    "actualUsd": 25.3499074,
-    "routedUsd": 12.60969352802,
+    "turns": 21,
+    "calls": 321,
+    "actualUsd": 30.404772,
+    "routedUsd": 15.137125828020004,
     "jev": [
       "clef-flash"
     ],
-    "avgJevLatencyMs": 6188.1
+    "avgJevLatencyMs": 6128.714285714285,
+    "subagents": [
+      {
+        "title": "Providers module (LiteLLM/CLI/mock)",
+        "model": "claude-haiku-5-5",
+        "usage": {
+          "input": 72,
+          "cacheRead": 3868339,
+          "cacheWrite": 158544,
+          "output": 93370
+        },
+        "usd": 0.11708439
+      },
+      {
+        "title": "Slopalytics catalog module",
+        "model": "claude-haiku-5-5",
+        "usage": {
+          "input": 72,
+          "cacheRead": 4081286,
+          "cacheWrite": 142360,
+          "output": 95028
+        },
+        "usd": 0.11680606
+      },
+      {
+        "title": "Code review of JevRouting main",
+        "model": "claude-haiku-5-5",
+        "usage": {
+          "input": 38,
+          "cacheRead": 2488318,
+          "cacheWrite": 287022,
+          "output": 69314
+        },
+        "usd": 0.11694838
+      },
+      {
+        "title": "Code review of JevRouting main (DeepSeek)",
+        "model": "opencode/deepseek-v4.1-flash-free",
+        "usage": {
+          "input": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0,
+          "output": 0
+        },
+        "usd": 0
+      }
+    ],
+    "subagentUsd": 0.35083883,
+    "crossCheck": {
+      "t3": {
+        "input": 596,
+        "cacheRead": 83911278,
+        "cacheWrite": 801868,
+        "output": 230944
+      },
+      "transcript": {
+        "input": 646,
+        "cacheRead": 93651280,
+        "cacheWrite": 843704,
+        "output": 246115
+      }
+    }
   },
   "turns": [
     {
@@ -178,7 +239,7 @@
     {
       "turn": 7,
       "at": "2026-10-26T22:55:47.584Z",
-      "prompt": "And figure out what and how to feed jev, since i don't fully trust argon. [Image: image.png; ref=image_40d18435-270d-4266-b4d1-907bba71b91f] ; Should take into ",
+      "prompt": "And figure out what and how to feed jev, since i don't fully trust argon. ![image.png](t3-context://v1/image/image_40d18435-270d-4266-b4d1-907bba71b91f) ; Shoul",
       "calls": 2,
       "tokens": {
         "input": 4,
@@ -421,7 +482,7 @@
     {
       "turn": 16,
       "at": "2026-10-26T23:14:06.650Z",
-      "prompt": "[REDACTED] - work",
+      "prompt": "[REDACTED] - workers ai api token - no credit on it",
       "calls": 7,
       "tokens": {
         "input": 14,
@@ -530,12 +591,12 @@
       "turn": 20,
       "at": "2026-10-27T03:40:03.235Z",
       "prompt": "Continue where you left off.",
-      "calls": 61,
+      "calls": 84,
       "tokens": {
-        "input": 124,
-        "cacheRead": 25399460,
-        "cacheWrite": 447023,
-        "output": 42666
+        "input": 174,
+        "cacheRead": 36291047,
+        "cacheWrite": 468628,
+        "output": 52620
       },
       "decision": {
         "source": "jev",
@@ -549,9 +610,36 @@
         "providerId": "claude-sonnet",
         "effort": "high"
       },
-      "actualUsd": 9.509891999999999,
-      "routedUsd": 4.803107099999999,
+      "actualUsd": 12.060329400000004,
+      "routedUsd": 6.078325800000002,
       "switched": true
+    },
+    {
+      "turn": 21,
+      "at": "2026-10-27T05:30:23.476Z",
+      "prompt": "/goal finish implementation + testing ( against this t3 thread which you will export in full )",
+      "calls": 20,
+      "tokens": {
+        "input": 42,
+        "cacheRead": 9932756,
+        "cacheWrite": 26951,
+        "output": 15105
+      },
+      "decision": {
+        "source": "jev",
+        "jevModel": "clef-flash",
+        "jevLatencyMs": 4941,
+        "level": 3,
+        "required": 44,
+        "kind": "implement",
+        "agentic": 0.6947,
+        "risk": 0.9847,
+        "providerId": "claude-sonnet",
+        "effort": "high"
+      },
+      "actualUsd": 2.5044272000000003,
+      "routedUsd": 1.2522136000000001,
+      "switched": false
     }
   ]
 }
