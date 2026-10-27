@@ -83,12 +83,16 @@ function effortVariants(p: ProviderConfig, family: string, catalog?: CatalogLook
   const out: Array<{ effort: Effort; v?: CatalogVariant }> = [];
   for (const effort of efforts) {
     const v = catalog?.variant(family, effort);
+    // No data for this effort: don't rank it, or every unknown effort ties and the lowest one wins.
+    if (!v && !p.efforts) continue;
     if (v) {
       // Only take a variant whose own effort matches, unless the provider pinned efforts explicitly.
-      const exact = v.effort === effort || (v.effort === 'default' && effort === 'medium');
+      // A 'default' variant (one shared prior, e.g. a secondary source) applies to every pinned effort.
+      const exact = v.effort === effort || (v.effort === 'default' && (effort === 'medium' || !!p.efforts));
       if (!exact && !p.efforts) continue;
-      if (seen.has(v.id)) continue;
-      seen.add(v.id);
+      // Nearest-effort stand-ins are deduped by variant id; exact matches are always kept.
+      if (!exact && seen.has(v.id)) continue;
+      if (!exact) seen.add(v.id);
     }
     out.push({ effort, v });
   }
@@ -228,9 +232,11 @@ export function buildPlan(ranked: Candidate[], fallback: string[], maxAttempts =
   for (const id of fallback) {
     if (used.has(id)) continue;
     const c = ranked.find((r) => r.providerId === id);
-    // A provider in quota/sign-in cooldown would just fail again; skip it unless the plan is empty.
-    if (plan.length && c?.reasons.some((r) => r.startsWith('unavailable:'))) continue;
-    plan.push({ providerId: id, effort: c?.effort ?? 'medium' });
+    // Not ranked = disabled or outside routing.only. Cooling down (quota/sign-in) would just fail
+    // again, so skip it too, unless it is the only thing left to try.
+    if (!c) continue;
+    if (plan.length && c.reasons.some((r) => r.startsWith('unavailable'))) continue;
+    plan.push({ providerId: id, effort: c.effort });
     used.add(id);
   }
   return plan;

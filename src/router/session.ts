@@ -71,12 +71,17 @@ export class SessionStore {
     }
   }
 
+  /** Best effort: a state-file write error must never fail a routed request. */
   private save() {
     const file = this.opts.file;
     if (!file) return;
-    mkdirSync(dirname(file), { recursive: true });
-    const tmp = `${file}.${process.pid}.tmp`;
-    writeFileSync(tmp, JSON.stringify(Object.fromEntries(this.sessions)));
-    renameSync(tmp, file);
+    try {
+      mkdirSync(dirname(file), { recursive: true });
+      const tmp = `${file}.${process.pid}.tmp`;
+      writeFileSync(tmp, JSON.stringify(Object.fromEntries(this.sessions)));
+      renameSync(tmp, file);
+    } catch {
+      // Losing one session update is harmless; failing the completion is not.
+    }
   }
 }

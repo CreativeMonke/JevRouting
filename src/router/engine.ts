@@ -142,7 +142,9 @@ export class Router {
   /** Report a task outcome after the fact (e.g. tests failed on the produced change). */
   feedback(providerId: string, effort: string, ok: boolean, sessionId?: string) {
     this.outcomes.record(providerId, effort, ok);
-    if (sessionId && !ok) this.sessions.get(sessionId).consecutiveFailures++;
+    if (!sessionId) return;
+    const s = this.sessions.get(sessionId);
+    s.consecutiveFailures = ok ? 0 : s.consecutiveFailures + 1;
   }
 
   private messagesFor(task: TaskInput, prune: boolean): ChatMessage[] {

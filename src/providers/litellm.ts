@@ -73,8 +73,11 @@ export class LiteLLMProvider implements Provider {
       if (!response.ok) throw httpError(this.id, response.status, response.text);
       const json = parseJson(response.text, this.id);
       const body = parseChatCompletion(json, this.id);
+      const text = body.choices[0]?.message.content ?? '';
+      // An empty reply is no answer: count it as a failure so the engine falls through and records it.
+      if (!text) throw new ProviderError(`${this.id} returned an empty completion`, this.id, true);
       return {
-        text: body.choices[0]?.message.content ?? '',
+        text,
         providerId: this.id,
         model: this.model,
         latencyMs: this.now() - startedAt,

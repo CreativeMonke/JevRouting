@@ -180,7 +180,7 @@ export async function assessWithJev(
 }
 
 const KIND_PATTERNS: Array<[TaskKind, RegExp]> = [
-  ['trivial', /^\s*(hi|hello|hey|thanks?|thank you|ok|yo)\b|^.{0,25}$/i],
+  ['trivial', /^\s*(hi|hello|hey|thanks?|thank you|ok|yo)\b/i],
   ['architecture', /\b(architect|design|system design|trade-?offs?|migrat(e|ion) plan|scal(e|ing|ability)|rfc)\b/i],
   ['debug', /\b(bug|debug|crash|stack ?trace|exception|fails?|failing|broken|race|deadlock|leak|regression|why does)\b/i],
   ['review', /\b(review|audit|security check|look over|critique)\b/i],
